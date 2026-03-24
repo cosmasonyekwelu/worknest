@@ -1,0 +1,153 @@
+@import url("https://fonts.cdnfonts.com/css/inter");
+@import "tailwindcss";
+@plugin "daisyui" {
+  themes: light --default;
+}
+@import "swiper/css";
+@import "swiper/css/autoplay";
+@import "swiper/css/effect-fade";
+@import "swiper/css/pagination";
+
+/* @plugin "daisyui" */
+
+@theme {
+  --light-gray: #f4f4f4;
+  --color-primary: #ffc6ae;
+  --sidebar-color: #0a0a0a;
+  --sidebar-active-color: #f57450;
+}
+
+* {
+  scroll-behavior: smooth;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+}
+
+body {
+  background-color: #F3F4F6;
+  font-family: "Inter", sans-serif;
+  line-height: 1.5;
+   font-weight: 400;
+  
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.navbar {
+  height: 64px;
+  display: flex;
+  align-items: center;
+}
+
+.dashboard {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  min-height: 100vh;
+}
+
+.dashboard-content {
+  padding: 1.5rem;
+}
+
+:root {
+  --max-width: 1200px;
+  --padding-x: 1rem;
+}
+
+.container {
+  max-width: var(--max-width);
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: var(--padding-x);
+  padding-right: var(--padding-x);
+}
+
+.loader {
+  height: 30px;
+  aspect-ratio: 2.5;
+  --_g: no-repeat radial-gradient(farthest-side, #000 90%, #0000);
+  background: var(--_g), var(--_g), var(--_g), var(--_g);
+  background-size: 20% 50%;
+  animation: l43 1s infinite linear;
+}
+@keyframes l43 {
+  0% {
+    background-position:
+      calc(0 * 100% / 3) 50%,
+      calc(1 * 100% / 3) 50%,
+      calc(2 * 100% / 3) 50%,
+      calc(3 * 100% / 3) 50%;
+  }
+  16.67% {
+    background-position:
+      calc(0 * 100% / 3) 0,
+      calc(1 * 100% / 3) 50%,
+      calc(2 * 100% / 3) 50%,
+      calc(3 * 100% / 3) 50%;
+  }
+  33.33% {
+    background-position:
+      calc(0 * 100% / 3) 100%,
+      calc(1 * 100% / 3) 0,
+      calc(2 * 100% / 3) 50%,
+      calc(3 * 100% / 3) 50%;
+  }
+  50% {
+    background-position:
+      calc(0 * 100% / 3) 50%,
+      calc(1 * 100% / 3) 100%,
+      calc(2 * 100% / 3) 0,
+      calc(3 * 100% / 3) 50%;
+  }
+  66.67% {
+    background-position:
+      calc(0 * 100% / 3) 50%,
+      calc(1 * 100% / 3) 50%,
+      calc(2 * 100% / 3) 100%,
+      calc(3 * 100% / 3) 0;
+  }
+  83.33% {
+    background-position:
+      calc(0 * 100% / 3) 50%,
+      calc(1 * 100% / 3) 50%,
+      calc(2 * 100% / 3) 50%,
+      calc(3 * 100% / 3) 100%;
+  }
+  100% {
+    background-position:
+      calc(0 * 100% / 3) 50%,
+      calc(1 * 100% / 3) 50%,
+      calc(2 * 100% / 3) 50%,
+      calc(3 * 100% / 3) 50%;
+  }
+}
+
+.swiper-pagination-bullet {
+  background: rgba(255, 255, 255, 0.5);
+  opacity: 1;
+}
+
+.swiper-pagination-bullet-active {
+  background: #f75f20;
+}
+
+.about{
+  background-image: url("/aboutUs.png");
+  background-size: cover;
+  background-position: center;
+  
+}
+
