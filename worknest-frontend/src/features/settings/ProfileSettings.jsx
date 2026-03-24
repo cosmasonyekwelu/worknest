@@ -1,6 +1,5 @@
 import { updateProfilePreferences } from "@/api/settings";
 import { updateUserProfile } from "@/api/user";
-import Avatar from "@/components/Avatar";
 import ErrorAlert from "@/components/ErrorAlert";
 import UploadImage from "@/features/Profile/UploadImage";
 import DeleteAccountSection from "@/features/settings/DeleteAccountSection";
@@ -13,7 +12,7 @@ import { profilePreferencesSchema } from "@/features/settings/schemas";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useAuth } from "@/store";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Camera, Globe2, Save } from "lucide-react";
+import { Globe2, Save } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -155,8 +154,8 @@ export default function ProfileSettings({
       </div>
 
       <section className="rounded-2xl border border-gray-200 bg-white p-5 sm:p-6">
-        <div className="grid gap-6 lg:grid-cols-[280px_1fr] lg:items-start">
-          <div className="space-y-5">
+        <div className="space-y-8">
+          <div className="grid gap-6 lg:grid-cols-[240px_1fr] lg:items-start">
             <div className="space-y-2">
               <h3 className="text-xl font-semibold text-gray-900">Basic details</h3>
               <p className="text-sm leading-6 text-gray-600">
@@ -164,21 +163,9 @@ export default function ProfileSettings({
               </p>
             </div>
 
-            <div className="flex items-center gap-4">
-              <Avatar
-                src={user?.avatar}
-                name={user?.fullname || user?.name || "User"}
-                alt={user?.fullname || "User avatar"}
-                size={88}
-                className="h-22 w-22 rounded-full object-cover"
-              />
-              <div className="inline-flex items-center gap-2 rounded-full bg-orange-50 px-3 py-2 text-sm font-semibold text-[#F75D1F]">
-                <Camera size={16} />
-                Avatar
-              </div>
+            <div className="rounded-2xl border border-gray-100 bg-[#FCFCFD] p-5">
+              <UploadImage variant="settings" />
             </div>
-
-            <UploadImage />
           </div>
 
           <div className="space-y-4">
