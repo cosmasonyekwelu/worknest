@@ -118,11 +118,11 @@ export default function Verify() {
   };
 
   return (
-    <div className="w-full flex items-center justify-center gap-2">
+    <div className="flex w-full items-center justify-center px-4 py-6">
       {success || user?.isVerified ? (
         <>
           {" "}
-          <div className="p-4 max-w-200 mx-auto text-center">
+          <div className="mx-auto w-full max-w-2xl p-4 text-center">
             <img src="/Success.svg" alt="success" className="w-full h-full" />
             <h1 className="text-2xl font-bold">Congratulations!</h1>
             <p className="text-gray-600">
@@ -138,30 +138,32 @@ export default function Verify() {
           </div>
         </>
       ) : (
-        <div className="w-full max-w-md lg:max-w-lg mx-auto bg-[#FFF6F2] p-6 rounded-xl shadow">
+        <div className="mx-auto w-full max-w-md rounded-xl bg-[#FFF6F2] p-5 shadow sm:p-6 lg:max-w-lg">
           <form
             className="flex flex-col items-center gap-2 w-full"
             onSubmit={onSubmit}
           >
-            <h1 className="text-2xl font-bold">Enter the 6-digit Code</h1>
-            <p className="text-gray-600 text-md">
+            <h1 className="text-center text-2xl font-bold">Enter the 6-digit Code</h1>
+            <p className="text-center text-gray-600 text-md">
               We have sent a verification code to your email.
             </p>
-            <div className="my-4 w-full md:w-[350px] text-center">
+            <div className="my-4 w-full text-center sm:max-w-[350px]">
               {error && <ErrorAlert error={error} />}
-              <PinField
-                length={6}
-                autoComplete="one-time-code"
-                autoCorrect="off"
-                dir="ltr"
-                pattern="[0-9]"
-                type="text"
-                value={verificationToken}
-                onChange={(value) => {
-                  setVerificationToken(value);
-                }}
-                className="w-12 sm:w-14 text-center border border-gray-300 rounded-md p-2 font-bold bg-white"
-              />
+              <div className="flex flex-wrap justify-center gap-2 sm:gap-3">
+                <PinField
+                  length={6}
+                  autoComplete="one-time-code"
+                  autoCorrect="off"
+                  dir="ltr"
+                  pattern="[0-9]"
+                  type="text"
+                  value={verificationToken}
+                  onChange={(value) => {
+                    setVerificationToken(value);
+                  }}
+                  className="w-11 rounded-md border border-gray-300 bg-white p-2 text-center font-bold sm:w-12 sm:p-3"
+                />
+              </div>
             </div>
             <button
               type="submit"

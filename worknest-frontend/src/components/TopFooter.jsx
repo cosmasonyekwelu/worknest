@@ -7,12 +7,12 @@ import { Facebook, Instagram, Twitter, Youtube } from "lucide-react";
 export default function TopFooter() {
   return (
     <div className="pt-8">
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-8">
+      <div className="grid grid-cols-1 gap-8 md:grid-cols-2 xl:grid-cols-4">
         <div>
-          <div className="mb-5 w-45">
+          <div className="mb-5 max-w-[180px]">
             <Logo />
           </div>
-          <p className="text-[14px] md:text-[18px] text-[#000000] lg:w-50">
+          <p className="max-w-sm text-[14px] text-[#000000] md:text-[18px]">
             A strictly curated job platform where every listing is hand-picked
             and managed by the recruiter. We value quality and transparency
             above all.
@@ -61,7 +61,7 @@ export default function TopFooter() {
           </div>
         </div>
       </div>
-      <div className="flex justify-center space-x-4 p-7">
+      <div className="flex flex-wrap justify-center gap-4 p-7">
         <Facebook className="text-[#000000] hover:text-[#F75D1F] cursor-pointer" />
         <Instagram className="text-[#000000] hover:text-[#F75D1F] cursor-pointer" />
         <Twitter className="text-[#000000] hover:text-[#F75D1F] cursor-pointer" />

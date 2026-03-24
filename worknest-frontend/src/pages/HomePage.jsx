@@ -51,8 +51,6 @@ const HomePage = () => {
     navigate(`/jobs?${params.toString()}`);
   };
 
-  console.log(jobs);
-
   useMetaArgs({
     title: "Home - Worknest",
     description:
@@ -61,14 +59,14 @@ const HomePage = () => {
   });
 
   return (
-    <div className="container sm:mt-[91px] mt-[40px]">
-      <div className=" grid lg:grid-cols-2 items-center sm:justify-between sm:gap-10 xl:gap-20 gap-10 ">
-        <div className="w-full lg:w-[549px] xl:w-[549px] flex flex-col gap-12">
+    <div className="container mt-10 sm:mt-[91px]">
+      <div className="grid items-center gap-10 sm:justify-between sm:gap-10 lg:grid-cols-2 xl:gap-20">
+        <div className="flex w-full max-w-2xl flex-col gap-10 sm:gap-12">
           <div className="flex flex-col items-start gap-5 sm:gap-[42px]">
-            <p className="bg-[#FEEEEA] text-[14px] py-2.5 px-5 w-[227px] rounded-[15px] text-[#000000] font-medium">
+            <p className="rounded-[15px] bg-[#FEEEEA] px-5 py-2.5 text-[14px] font-medium text-[#000000]">
               OVER 5,O00+ ACTIVE JOBS
             </p>
-            <h1 className="sm:text-[65px] xl:text-[60px] text-[38px] font-extrabold sm:leading-[70px]  leading-[50px] text-[#000000]">
+            <h1 className="text-[38px] font-extrabold leading-[50px] text-[#000000] sm:text-[56px] sm:leading-[64px] xl:text-[60px] xl:leading-[70px]">
               Unlock your next
               <span className="text-[#F86021]"> career milestone</span>
             </h1>
@@ -77,8 +75,7 @@ const HomePage = () => {
               verified, and posted directly by our platform administrators to
               ensure high-quality career matches.
             </p>
-
-            <div className="flex flex-col sm:flex-row  border border-[#00000036] rounded-[20px] p-5 sm:justify-between lg:gap-[8px] gap-4 lg:w-[487px] w-full">
+            <div className="flex w-full max-w-[487px] flex-col gap-4 rounded-[20px] border border-[#00000036] p-5 sm:flex-row sm:justify-between lg:gap-[8px]">
               <div className="flex items-center gap-[11px] flex-1">
                 <Search className="w-[16px] h-[16px] text-[#292D32]" />
                 <input
@@ -90,7 +87,7 @@ const HomePage = () => {
                 />
               </div>
 
-              <div className="border border-[#000000] sm:h-[35px]  "></div>
+              <div className="hidden border border-[#000000] sm:block sm:h-[35px]" />
 
               <div className="flex items-center gap-[7px] flex-1 text-end">
                 <MapPin className="w-[14px] lg:w-[14px] sm:w-[20px] h-5 text-[#6B7280]" />
@@ -108,39 +105,39 @@ const HomePage = () => {
 
           <button
             onClick={handleSearch}
-            className="lg:w-[505px] w-full bg-[#F86021] py-5 sm:py-[30px] px-5 text-[24px] font-medium leading-[22px] rounded-[15px] text-white cursor-pointer"
+            className="w-full max-w-[505px] cursor-pointer rounded-[15px] bg-[#F86021] px-5 py-5 text-[20px] font-medium leading-[22px] text-white sm:py-[30px] sm:text-[24px]"
           >
             Search Job
           </button>
         </div>
-        <div>
+        <div className="w-full">
           <img
             src={hero}
             alt=""
-            className="rounded-[20px] w-full max-w-[100%] sm:w-[100%] lg:w-[641px]"
-          />{" "}
+            className="w-full rounded-[20px] lg:max-w-[641px]"
+          />
         </div>
       </div>
       {/*  */}
 
       <div className="flex flex-col gap-[80px] mt-[89px]">
-        <div className="bg-white flex flex-col gap-[63px] py-12 px-[64px]">
-          <div className="items-center mx-auto flex flex-col gap-[14px] sm:w-[438px] w-full">
-            <h4 className="sm:text-[40px] text-[26px] font-semibold whitespace-nowrap">
+        <div className="flex flex-col gap-[63px] bg-white px-5 py-12 sm:px-8 lg:px-[64px]">
+          <div className="mx-auto flex w-full max-w-[438px] flex-col items-center gap-[14px] text-center">
+            <h4 className="text-[26px] font-semibold sm:text-[40px]">
               How it works for job seekers
             </h4>
-            <p className="sm:text-[24px] text-[16px] font-medium text-[#6B7280] whitespace-nowrap">
+            <p className="text-[16px] font-medium text-[#6B7280] sm:text-[24px]">
               The journey to a better career starts here
             </p>
           </div>
           <div
             className="grid sm:grid-cols-3 gap-12 md:gap-10 items-center  "
           >
-            <div className="gap-[29px] items-center flex flex-col min-w-[90%] sm:min-w-auto ">
+            <div className="flex flex-col items-center gap-[29px]">
               <div className="bg-[#D1DDF4] rounded-[10px] p-[15px] gap-[10px] w-[48px] h-[48px] flex items-center">
                 <Search className="text-[#1C3FCB]  w-[18px] h-[18px]" />
               </div>
-              <h6 className="font-bold text-[22px] whitespace-nowrap ">
+              <h6 className="text-[22px] font-bold">
                 {" "}
                 1. Search
               </h6>
@@ -149,12 +146,12 @@ const HomePage = () => {
               </p>
             </div>
 
-            <div className="gap-[29px] items-center flex flex-col min-w-[90%] sm:min-w-auto">
+            <div className="flex flex-col items-center gap-[29px]">
               <div className="bg-[#CCC5F0] rounded-[10px] p-[15px] gap-[10px] w-[48px] h-[48px] flex items-center">
                 <Play className="text-[#3A20BC] w-5 h-5 " />
               </div>
 
-              <h6 className="font-bold text-[22px] whitespace-nowrap  ">
+              <h6 className="text-[22px] font-bold">
                 {" "}
                 2. Apply
               </h6>
@@ -163,12 +160,12 @@ const HomePage = () => {
               </p>
             </div>
 
-            <div className="gap-[29px] items-center flex flex-col min-w-[90%] sm:min-w-auto ">
+            <div className="flex flex-col items-center gap-[29px]">
               <div className="bg-[#EBD9D5] rounded-[10px] p-[15px] gap-[10px] w-[48px] h-[48px] flex items-center">
                 <BarChart className="text-[#F86021]  w-5 h-5" />
               </div>
 
-              <h6 className="font-bold text-[22px] whitespace-nowrap ">
+              <h6 className="text-[22px] font-bold">
                 {" "}
                 3. Track
               </h6>
@@ -291,16 +288,16 @@ const HomePage = () => {
               <div className="flex flex-col lg:flex-row gap-10 justify-between flex-1 items-center sm:items-stretch ">
                 <div className="flex flex-col sm:gap-[11px] gap-5">
                   <div className="flex flex-wrap sm:flex-nowrap sm:gap-[34px] gap-3 items-center">
-                    <h4 className=" lg:text-[32px] sm:text-[25px] text-[28px] font-semibold leading-[100%] ">
+                    <h4 className="text-center text-[24px] font-semibold leading-[100%] sm:text-left sm:text-[25px] lg:text-[32px]">
                       {job.title}
                     </h4>
                     <div className="bg-[#FFDACF] px-4 py-1.5 rounded-[20px] flex justify-center">
-                      <p className="lg:text-[20px] text-[16px] font-semibold whitespace-nowrap">
+                      <p className="text-[16px] font-semibold lg:text-[20px]">
                         {job.jobType}
                       </p>
                     </div>
                   </div>
-                  <div className="flex sm:flex-row flex-col sm:items-center items-start gap-[27px] whitespace-nowrap">
+                  <div className="flex flex-col items-start gap-[18px] sm:flex-row sm:flex-wrap sm:items-center sm:gap-[20px]">
                     <div className="flex items-center gap-3 ">
                       <img src={office} alt="" className="w-6 h-6" />
                       <p className="lg:text-[24px] text-[20px] font-medium leading-[24px] text-[#636E7C]">
@@ -325,7 +322,7 @@ const HomePage = () => {
                   </div>
                 </div>
                 <div className="flex items-end lg:self-end ">
-                  <button className="bg-[#F85E1E] py-[15px] px-[34px] rounded-[10px] text-[22px] font-semibold whitespace-nowrap shrink-0 cursor-pointer sm:w-auto  w-full md:w-full lg:w-auto text-white ">
+                  <button className="w-full shrink-0 cursor-pointer rounded-[10px] bg-[#F85E1E] px-[28px] py-[15px] text-[18px] font-semibold text-white sm:w-auto lg:text-[22px]">
                     View Details
                   </button>
                 </div>
@@ -342,9 +339,9 @@ const HomePage = () => {
       </div>
       {/*  */}
 
-      <div className="flex lg:flex-row flex-col sm:items-start items-center sm:gap-[153px] gap-[40px] sm:mt-[146px] mt-[100px]">
-        <div className="lg:w-[557px] w-full gap-[39px] flex flex-col">
-          <h4 className="sm:text-[40px] lg:text-start sm:text-center text-[25px] font-bold leading-[100%] ">
+      <div className="mt-[100px] flex flex-col items-center gap-[40px] sm:mt-[146px] sm:items-start lg:flex-row lg:gap-[80px] xl:gap-[153px]">
+        <div className="flex w-full max-w-[557px] flex-col gap-[39px]">
+          <h4 className="text-[25px] font-bold leading-[100%] sm:text-center sm:text-[40px] lg:text-start">
             Empowering tools for the modern job hunter
           </h4>
 
@@ -394,13 +391,13 @@ const HomePage = () => {
           </div>
         </div>
 
-        <div className="relative">
+        <div className="relative w-full max-w-xl">
           <img
             src={frame2}
             alt=""
-            className="lg:w-[520px] md:w-[900px] sm:w-[800px]"
+            className="w-full"
           />
-          <div className="absolute sm:bottom-[-20px] bottom-[-50px] sm:left-[-10px] sm:w-[316.57px] rounded-[9.23px] border-[0.92px] border-[#F89E85] bg-white py-[23.07px] px-[15.69px] flex flex-col gap-[18.46px] shadow-xl">
+          <div className="absolute bottom-[-40px] left-2 flex w-[calc(100%-1rem)] max-w-xs flex-col gap-[18.46px] rounded-[9.23px] border-[0.92px] border-[#F89E85] bg-white px-[15.69px] py-[23.07px] shadow-xl sm:bottom-[-20px] sm:left-[-10px] sm:max-w-[316.57px]">
             <div className="flex items-center gap-[18px]">
               <p className="bg-[#009E2A] rounded-full w-[9.23px] h-[9.23px]"></p>
               <p className="text-[13.84px] font-semibold text-[#636E7C] leading-[100%]">
@@ -417,10 +414,10 @@ const HomePage = () => {
 
       {/*  */}
 
-      <div className="mt-[124px] bg-[#000000]  py-[67px] rounded-[30px]">
-        <div className="lg:w-[854px]  mx-auto  flex flex-col gap-[48px]">
+      <div className="mt-[124px] rounded-[30px] bg-[#000000] px-4 py-[67px]">
+        <div className="mx-auto flex max-w-4xl flex-col gap-[48px]">
           <div className=" text-center space-y-5">
-            <h4 className=" lg:text-[48px] sm:text-[35px] text-[35px] font-extrabold text-white leding-[100%] sm:whitespace-nowrap">
+            <h4 className="text-[35px] font-extrabold text-white leding-[100%] sm:text-[35px] lg:text-[48px]">
               Ready to find your{" "}
               <span className="text-[#F85E1E]">next career</span> step?
             </h4>

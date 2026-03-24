@@ -212,7 +212,7 @@ export default function Jobs() {
         />
       )}
 
-      <div className="w-auto py-3 md:py-16 bg-[#F8E0E1]">
+      <div className="w-auto bg-[#F8E0E1] py-8 md:py-16">
         <div className="container mx-auto px-4 flex flex-col">
           <div className="bg-[#fcedea] text-[#F57450] px-4 py-1.5 rounded-full text-xs w-fit font-bold uppercase  mb-8">
             Browse Opportunities
@@ -272,12 +272,12 @@ export default function Jobs() {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-8 pb-16 relative">
+      <div className="container relative mx-auto grid grid-cols-1 gap-8 px-4 pb-16 lg:grid-cols-[340px_1fr]">
         {/* Toggle Filter Button (Visible on Mobile/Tablet) */}
         <div className="lg:hidden mb-4">
           <button
             onClick={() => setShowMobileFilters(true)}
-            className="flex items-center gap-2 px-6 py-3 bg-white border border-gray-200 rounded-xl font-bold text-gray-700 shadow-sm hover:bg-gray-50"
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-6 py-3 font-bold text-gray-700 shadow-sm hover:bg-gray-50 sm:w-auto"
           >
             <Filter size={20} />
             <span>Filters</span>
@@ -289,7 +289,7 @@ export default function Jobs() {
           className={`
             bg-white p-6 rounded-xl space-y-6 border border-gray-100 shadow-sm h-fit overflow-y-auto
             lg:block lg:static lg:w-auto lg:h-fit lg:z-0 lg:shadow-sm lg:translate-x-0
-            fixed inset-y-0 left-0 z-50 w-[300px] shadow-2xl transform transition-transform duration-300 ease-in-out
+            fixed inset-y-0 left-0 z-50 w-[85vw] max-w-[320px] shadow-2xl transform transition-transform duration-300 ease-in-out
             ${showMobileFilters ? "translate-x-0" : "-translate-x-full"}
           `}
         >
@@ -377,7 +377,7 @@ export default function Jobs() {
 
         {/* JOB LIST */}
         <div className="flex flex-col gap-6">
-          <div className="flex items-center justify-between bg-white p-4 rounded-xl border border-gray-100 shadow-sm mb-2">
+          <div className="mb-2 flex flex-col items-start justify-between gap-2 rounded-xl border border-gray-100 bg-white p-4 shadow-sm sm:flex-row sm:items-center">
             <p className="text-gray-600 font-medium">
               Showing{" "}
               {isLoading ? (
@@ -429,7 +429,7 @@ export default function Jobs() {
           {/* PAGINATION UI */}
           {/* Only show pagination if NOT loading and we have pages */}
           {!isLoading && totalPages > 1 && (
-            <div className="flex items-center justify-center gap-4 mt-8 pb-8">
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-4 pb-8">
               <button
                 disabled={currentPage <= 1}
                 onClick={() => handlePageChange(currentPage - 1)}

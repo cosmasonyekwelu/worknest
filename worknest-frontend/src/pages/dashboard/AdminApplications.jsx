@@ -166,7 +166,7 @@ const AdminApplications = () => {
           </div>
         ) : applications.length > 0 ? (
           viewMode === "grid" ? (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
               {applications.map((application) => (
                 <ApplicationCard
                   key={application.id}
@@ -177,7 +177,7 @@ const AdminApplications = () => {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <div className="min-w-[700px] bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden">
+              <div className="min-w-[640px] overflow-hidden rounded-lg border border-gray-200 bg-white shadow-md">
                 <Table applications={applications} />
               </div>
             </div>
@@ -192,7 +192,7 @@ const AdminApplications = () => {
       </div>
 
       {/* Results Count and Pagination could be here */}
-      <div className="text-sm text-gray-600 mt-6 flex justify-between items-center">
+      <div className="mt-6 flex flex-col gap-2 text-sm text-gray-600 sm:flex-row sm:items-center sm:justify-between">
         <span>
           Showing {applications.length} of {total} applications
         </span>

@@ -39,16 +39,16 @@ const redirect = () => {
   const isAuthError = authErrors.includes(String(details));
 
   return (
-    <div className="container mx-auto p-4 flex flex-col items-center justify-center min-h-screen gap-2">
+    <div className="container mx-auto flex min-h-screen flex-col items-center justify-center gap-4 px-4 py-8 text-center">
       {error?.status === 404 ? (
-        <img src="/404.gif" alt="404" className="w-[30%] h-[300px]" />
+        <img src="/404.gif" alt="404" className="h-auto w-full max-w-xs sm:max-w-sm" />
       ) : (
-        <img src="/Error.jpg" alt="Error" className="w-[50%] h-[300px]" />
+        <img src="/Error.jpg" alt="Error" className="h-auto w-full max-w-sm sm:max-w-md" />
       )}
 
-      <h1 className="text-2xl font-bold">Something went wrong</h1>
+      <h1 className="text-2xl font-bold sm:text-3xl">Something went wrong</h1>
       <p className="text-red-600 font-bold text-xl">{message}</p>
-      <p className="text-gray-600">
+      <p className="max-w-xl text-gray-600">
         {isAuthError ? "Session expired" : details}
       </p>
 

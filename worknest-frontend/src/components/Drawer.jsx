@@ -42,7 +42,7 @@ export default function Drawer() {
 
       {/* Drawer */}
       <aside
-        className={`fixed top-0 right-0 h-full w-72 bg-white shadow-lg z-50 transform transition-transform duration-300 ease-in-out ${
+        className={`fixed top-0 right-0 z-50 h-full w-[85vw] max-w-72 bg-white shadow-lg transform transition-transform duration-300 ease-in-out ${
           open ? "translate-x-0" : "translate-x-full"
         }`}
         aria-hidden={!open}
@@ -68,8 +68,8 @@ export default function Drawer() {
                   alt={user.name}
                   size={48}
                 />
-                <p className="font-medium text-[20px] text-[#0E0E0E]">
-                  {user.name}
+                <p className="max-w-[180px] truncate font-medium text-[20px] text-[#0E0E0E]">
+                  {user.fullname || user.name}
                 </p>
               </div>
               <p className="text-[16px] text-[#F89E85] font-light">

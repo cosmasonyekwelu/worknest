@@ -43,7 +43,7 @@ export default function UserDropdown() {
         className="w-14 h-14 rounded-full object-cover"
       />
       
-      <span className="text-[18px] text-[#000000] font-medium">
+      <span className="hidden max-w-[160px] truncate text-[18px] font-medium text-[#000000] xl:block">
         {user?.fullname || user?.name}
       </span>
 
@@ -62,7 +62,7 @@ export default function UserDropdown() {
 
       {/* Dropdown menu */}
       {open && (
-        <div className="absolute right-0 top-full mt-3 w-56 bg-white px-3 py-4 rounded-[10px] shadow-lg z-50">
+        <div className="absolute right-0 top-full z-50 mt-3 w-56 rounded-[10px] bg-white px-3 py-4 shadow-lg">
           {/* User info */}
           <div className="py-3 border-b-[0.5px] border-[#A0A0A0]">
             <p className="font-semibold text-[#0E0E0E] text-[18px]">

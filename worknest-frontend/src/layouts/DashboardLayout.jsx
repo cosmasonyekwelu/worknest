@@ -7,7 +7,7 @@ export default function DashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="flex min-h-screen relative">
+    <div className="relative flex min-h-screen overflow-x-clip">
       {/* Sidebar */}
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
@@ -20,16 +20,16 @@ export default function DashboardLayout() {
       )}
 
       {/* Right section */}
-      <div className="flex-1 flex flex-col lg:ml-64">
+      <div className="flex flex-1 flex-col lg:ml-64">
         <AdminTopBar onMenuClick={() => setSidebarOpen(true)} />
         {/* main content area */}
-        <main className="flex-1 bg-[#F4F4F4] p-6">
+        <main className="flex-1 bg-[#F4F4F4] p-4 sm:p-6">
           {/* <header className="h-16 bg- border-b border-gray-200 flex items-center px-8">
           <h2 className="text-sm font-medium text-gray-400 uppercase tracking-wider">
             Admin Panel
           </h2>
         </header> */}
-          <div className="p-0">
+          <div className="min-w-0 p-0">
             <Outlet />
           </div>
         </main>

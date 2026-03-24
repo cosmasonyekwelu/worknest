@@ -214,7 +214,7 @@ const AdminJobs = () => {
 
       {/* Filters Area */}
       <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
-        <div className="relative w-full md:w-[400px]">
+        <div className="relative w-full md:max-w-[400px]">
           <Search
             className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
             size={18}

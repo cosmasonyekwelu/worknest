@@ -7,17 +7,17 @@ import ProfileMenu from "@/components/ProfileMenu";
 export default function Navbar() {
   return (
     <>
-      <nav className="fixed top-0 left-0 w-full shadow z-50 bg-white ">
-        <div className="container mx-auto flex justify-between items-center p-4">
+      <nav className="fixed top-0 left-0 z-50 w-full bg-white shadow">
+        <div className="container mx-auto flex items-center justify-between gap-3 px-4 py-3">
           <Logo />
       
-          <div className="hidden lg:flex gap-5 items-center">
+          <div className="hidden items-center gap-4 lg:flex xl:gap-6">
             {navLink.map((item) => (
               <NavLink
                 key={item.name}
                 to={item.path}
                 className={({ isActive }) =>
-                  `text-[18px] transition-colors duration-200 ${isActive ? "text-[#F75D1F]" : "text-[#000000] hover:text-[#F75D1F]"}`
+                  `text-base transition-colors duration-200 xl:text-[18px] ${isActive ? "text-[#F75D1F]" : "text-[#000000] hover:text-[#F75D1F]"}`
                 }
               >
                 {item.name}
@@ -25,7 +25,7 @@ export default function Navbar() {
             ))}
           </div>
 
-          <div>
+          <div className="shrink-0">
             <ProfileMenu />
           </div>
         </div>

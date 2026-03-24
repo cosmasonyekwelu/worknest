@@ -65,16 +65,16 @@ export default function Logout({ children, className }) {
           <X size={40} className="text-red-500" />
           <h1 className="text-2xl font-bold">Logout</h1>
           <p>are you sure you want to be logout?</p>
-          <div className="mt-4 mb-2 flex gap-2">
+          <div className="mt-4 mb-2 flex w-full flex-col gap-2 sm:flex-row">
             <button
               type="button"
-              className="btn btn-outline w-37.5 border-[0.2px] border-gray-500"
+              className="btn btn-outline w-full border-[0.2px] border-gray-500 sm:w-36"
               onClick={() => setIsOpen(false)}
             >
               Cancel
             </button>
             <button
-              className="btn bg-red-500 hover:bg-red-600 text-white w-37.5"
+              className="btn w-full bg-red-500 text-white hover:bg-red-600 sm:w-36"
               type="button"
               disabled={mutation.isPending}
               onClick={onLogout}
