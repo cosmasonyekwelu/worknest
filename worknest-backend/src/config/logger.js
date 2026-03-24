@@ -11,30 +11,36 @@ const transports = [
   })
 ];
 
-// Add file logging only in production
-if (process.env.NODE_ENV === "development") {
-  const logsDir = path.join(process.cwd(), "logs");
-  if (!fs.existsSync(logsDir)) {
-    fs.mkdirSync(logsDir);
+const shouldWriteFileLogs =
+  process.env.LOG_TO_FILES === "true" || process.env.NODE_ENV === "development";
+
+if (shouldWriteFileLogs) {
+  const logsDir = process.env.LOG_DIR || path.join(process.cwd(), "logs");
+
+  try {
+    fs.mkdirSync(logsDir, { recursive: true });
+
+    transports.push(
+      new winston.transports.File({
+        filename: path.join(logsDir, "error.log"),
+        level: "error",
+        format: winston.format.combine(
+          winston.format.timestamp(),
+          winston.format.json()
+        )
+      }),
+      new winston.transports.File({
+        filename: path.join(logsDir, "combined.log"),
+        format: winston.format.combine(
+          winston.format.timestamp(),
+          winston.format.json()
+        )
+      })
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    console.warn(`File logging disabled: could not initialize log directory "${logsDir}": ${message}`);
   }
-  
-  transports.push(
-    new winston.transports.File({
-      filename: path.join(logsDir, "error.log"),
-      level: "error",
-      format: winston.format.combine(
-        winston.format.timestamp(),
-        winston.format.json()
-      )
-    }),
-    new winston.transports.File({
-      filename: path.join(logsDir, "combined.log"),
-      format: winston.format.combine(
-        winston.format.timestamp(),
-        winston.format.json()
-      )
-    })
-  );
 }
 
 import { AsyncLocalStorage } from 'async_hooks';
