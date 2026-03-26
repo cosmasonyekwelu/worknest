@@ -1,10 +1,17 @@
 import { NavLink } from "react-router";
 import Logo from "./Logo";
-import { footerCompany, footerJobs } from "@/libs/constant";
+import { footerCompany, footerJobs, footerSocialLinks } from "@/libs/constant";
 import Email from "./Email";
 import { Facebook, Instagram, Twitter, Youtube } from "lucide-react";
 
 export default function TopFooter() {
+  const socialIconMap = {
+    facebook: Facebook,
+    instagram: Instagram,
+    twitter: Twitter,
+    youtube: Youtube,
+  };
+
   return (
     <div className="pt-8">
       <div className="grid grid-cols-1 gap-8 md:grid-cols-2 xl:grid-cols-4">
@@ -23,13 +30,23 @@ export default function TopFooter() {
           <h2 className="font-extrabold text-[16px] text-[#000000]">JOBS</h2>
           <div>
             {footerJobs.map((item) => (
-              <NavLink
-                to={item.path}
-                key={item.name}
-                className="block my-4 text-[14px] md:text-[18px] text-[#000000]"
-              >
-                {item.name}
-              </NavLink>
+              item.path && !item.disabled ? (
+                <NavLink
+                  to={item.path}
+                  key={item.name}
+                  className="block my-4 text-[14px] md:text-[18px] text-[#000000] hover:text-[#F75D1F] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F75D1F]"
+                >
+                  {item.name}
+                </NavLink>
+              ) : (
+                <span
+                  key={item.name}
+                  className="block my-4 text-[14px] md:text-[18px] text-[#6B7280]"
+                  aria-disabled="true"
+                >
+                  {item.name} {item.note ? `(${item.note})` : ""}
+                </span>
+              )
             ))}
           </div>
         </div>
@@ -41,7 +58,7 @@ export default function TopFooter() {
               <NavLink
                 to={item.path}
                 key={item.name}
-                className="block my-4 text-[14px] md:text-[18px] text-[#000000]"
+                className="block my-4 text-[14px] md:text-[18px] text-[#000000] hover:text-[#F75D1F] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F75D1F]"
               >
                 {item.name}
               </NavLink>
@@ -62,10 +79,22 @@ export default function TopFooter() {
         </div>
       </div>
       <div className="flex flex-wrap justify-center gap-4 p-7">
-        <Facebook className="text-[#000000] hover:text-[#F75D1F] cursor-pointer" />
-        <Instagram className="text-[#000000] hover:text-[#F75D1F] cursor-pointer" />
-        <Twitter className="text-[#000000] hover:text-[#F75D1F] cursor-pointer" />
-        <Youtube className="text-[#000000] hover:text-[#F75D1F] cursor-pointer" />
+        {footerSocialLinks.map((item) => {
+          const Icon = socialIconMap[item.icon];
+          if (!Icon) return null;
+          return (
+            <a
+              key={item.name}
+              href={item.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={item.name}
+              className="rounded-full p-2 text-[#000000] transition hover:-translate-y-0.5 hover:text-[#F75D1F] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F75D1F]"
+            >
+              <Icon className="h-6 w-6" />
+            </a>
+          );
+        })}
       </div>
     </div>
   );

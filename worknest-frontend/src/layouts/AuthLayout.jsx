@@ -1,5 +1,6 @@
 import AuthSlideshow from "@/components/AuthSlideshow";
 import Logo from "@/components/Logo";
+import ScrollRestoration from "@/components/common/ScrollRestoration";
 import { Outlet, useLocation } from "react-router";
 
 export default function AuthLayout() {
@@ -14,6 +15,7 @@ export default function AuthLayout() {
 
   return (
     <div className="flex min-h-screen">
+      <ScrollRestoration />
       {/* Left / Main Auth Content */}
       <div
         className={`flex flex-col w-full ${

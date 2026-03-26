@@ -2,12 +2,14 @@ import { useState } from "react";
 import { Outlet } from "react-router";
 import Sidebar from "@/components/dashboard/Sidebar";
 import AdminTopBar from "@/components/dashboard/AdminTopBar";
+import ScrollRestoration from "@/components/common/ScrollRestoration";
 
 export default function DashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
     <div className="relative flex min-h-screen overflow-x-clip">
+      <ScrollRestoration />
       {/* Sidebar */}
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 

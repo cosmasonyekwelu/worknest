@@ -23,7 +23,7 @@ export const profileLinks = [
 export const footerJobs = [
   { name: "Browse Jobs", path: "/jobs" },
   { name: "Job Applications", path: "/my-applications" },
-  { name: "Upload Resume", path: "/apply/:id" },
+  { name: "Upload Resume", path: null, disabled: true, note: "Coming soon" },
   { name: "Job Alerts", path: "/jobs" },
 ];
 
@@ -32,4 +32,11 @@ export const footerCompany = [
   { name: "Contact Us", path: "/contact" },
   { name: "Terms of Service", path: "/terms-of-service" },
   { name: "Privacy Policy", path: "/privacy-policy" },
+];
+
+export const footerSocialLinks = [
+  { name: "Facebook", href: "https://facebook.com/worknest", icon: "facebook" },
+  { name: "Instagram", href: "https://instagram.com/worknest", icon: "instagram" },
+  { name: "Twitter", href: "https://twitter.com/worknest", icon: "twitter" },
+  { name: "YouTube", href: "https://youtube.com/@worknest", icon: "youtube" },
 ];

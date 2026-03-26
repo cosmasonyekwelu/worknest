@@ -2,10 +2,12 @@ import { Outlet } from "react-router";
 import React from "react";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
+import ScrollRestoration from "@/components/common/ScrollRestoration";
 
 export default function MainLayouts() {
   return (
     <>
+      <ScrollRestoration />
       <header>
         <div className="container">
           <Navbar />
