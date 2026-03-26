@@ -17,7 +17,7 @@ export const getAuthenticatedUser = async (accessToken) => {
 };
 
 export const refreshAccessToken = async () => {
-  return await axiosInstance.post("/auth/refresh-token", {
+  return await axiosInstance.post("/auth/refresh-token", null, {
     withCredentials: true,
   });
 };
@@ -53,11 +53,18 @@ export const forgotPassword = async (email) => {
   return await axiosInstance.post("/auth/forgot-password", email);
 };
 
-export const resetPassword = async (userData) => {
-  return await axiosInstance.patch(
-    `/auth/reset-password?email=${userData.email}&token=${userData.token}`,
-    userData,
-  );
+export const resetPassword = async ({
+  email,
+  passwordResetToken,
+  password,
+  confirmPassword,
+}) => {
+  return await axiosInstance.patch("/auth/reset-password", {
+    email,
+    passwordResetToken,
+    password,
+    confirmPassword,
+  });
 };
 
 // JOBS API

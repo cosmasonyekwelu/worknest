@@ -36,6 +36,7 @@ export default function ApplicationDetail({ applicationId, onBack }) {
   const triggerAIReviewMutation = useTriggerAIReview();
   const updatePersonalInfoMutation = useUpdateApplicationPersonalInfo();
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (application) {
       setInternalNote(application.internalNote || "");
@@ -47,7 +48,8 @@ export default function ApplicationDetail({ applicationId, onBack }) {
         currentLocation: application.personalInfo?.currentLocation || "",
       });
     }
-  }, [application?.id, application?.internalNote, application?.personalInfo]);
+  }, [application]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
     const handleClickOutside = (event) => {

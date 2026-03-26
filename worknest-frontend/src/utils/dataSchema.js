@@ -98,6 +98,9 @@ export const validateResetPasswordSchema = z.object({
     .regex(/[a-z]/, {
       message: "Password must contain at least one lowercase letter",
     })
+    .regex(/[0-9]/, {
+      message: "Password must contain at least one number",
+    })
     .regex(/[!@#$%^&*(),.?":{}|<>]/, {
       message: "Password must contain at least one special character",
     }),
@@ -112,10 +115,13 @@ export const validateResetPasswordSchema = z.object({
     .regex(/[a-z]/, {
       message: "Password must contain at least one lowercase letter",
     })
+    .regex(/[0-9]/, {
+      message: "Password must contain at least one number",
+    })
     .regex(/[!@#$%^&*(),.?":{}|<>]/, {
       message: "Password must contain at least one special character",
     }),
-    }).refine((data) => data.password === data.confirmPassword, {
+}).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords must match",
   path: ["confirmPassword"],
 });
@@ -132,6 +138,9 @@ export const updatePasswordSchema = z.object({
     .regex(/[a-z]/, {
       message: "Password must contain at least one lowercase letter",
     })
+    .regex(/[0-9]/, {
+      message: "Password must contain at least one number",
+    })
     .regex(/[!@#$%^&*(),.?":{}|<>]/, {
       message: "Password must contain at least one special character",
     }),
@@ -145,6 +154,9 @@ export const updatePasswordSchema = z.object({
     })
     .regex(/[a-z]/, {
       message: "New Password must contain at least one lowercase letter",
+    })
+    .regex(/[0-9]/, {
+      message: "New Password must contain at least one number",
     })
     .regex(/[!@#$%^&*(),.?":{}|<>]/, {
       message: "New Password must contain at least one special character",
@@ -160,9 +172,15 @@ export const updatePasswordSchema = z.object({
     .regex(/[a-z]/, {
       message: "Confirm Password must contain at least one lowercase letter",
     })
+    .regex(/[0-9]/, {
+      message: "Confirm Password must contain at least one number",
+    })
     .regex(/[!@#$%^&*(),.?":{}|<>]/, {
       message: "Confirm Password must contain at least one special character",
     }),
+}).refine((data) => data.newPassword === data.confirmPassword, {
+  message: "Passwords must match",
+  path: ["confirmPassword"],
 });
 
 export const validateUserSchema = z.object({

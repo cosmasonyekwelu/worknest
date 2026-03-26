@@ -169,11 +169,19 @@ const userService = {
     }
 
     // Allowed profile updates
-    const allowedUpdates = ["fullname", "dateOfBirth", "bio", "country"];
+    const allowedUpdates = [
+      "fullname",
+      "dateOfBirth",
+      "bio",
+      "country",
+      "language",
+      "preferredCurrency",
+    ];
 
     for (const key of allowedUpdates) {
       if (userData[key] !== undefined && userData[key] !== null) {
-        user[key] = userData[key];
+        user[key] =
+          typeof userData[key] === "string" ? userData[key].trim() : userData[key];
       }
     }
     const updatedUser = await user.save();
@@ -189,7 +197,10 @@ const userService = {
       ...user.settings,
       notifications: {
         ...user.settings?.notifications,
-        ...settingsData,
+        email: settingsData.email ?? user.settings?.notifications?.email,
+        push: settingsData.push ?? user.settings?.notifications?.push,
+        marketing:
+          settingsData.marketing ?? user.settings?.notifications?.marketing,
       },
     };
 
@@ -207,7 +218,13 @@ const userService = {
       ...user.settings,
       profilePrivacy: {
         ...user.settings?.profilePrivacy,
-        ...settingsData,
+        profileVisibility:
+          settingsData.profileVisibility ??
+          user.settings?.profilePrivacy?.profileVisibility,
+        showEmail:
+          settingsData.showEmail ?? user.settings?.profilePrivacy?.showEmail,
+        showPhone:
+          settingsData.showPhone ?? user.settings?.profilePrivacy?.showPhone,
       },
     };
 

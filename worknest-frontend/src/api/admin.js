@@ -18,7 +18,7 @@ export const getAuthenticatedAdmin = async (accessToken) => {
 };
 
 export const refreshAdminAccessToken = async () => {
-  return await axiosInstance.post("/admin/refresh-token", {
+  return await axiosInstance.post("/admin/refresh-token", null, {
     withCredentials: true,
   });
 };

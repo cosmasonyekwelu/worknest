@@ -14,7 +14,7 @@ import { useAuth } from "@/store";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Globe2, Save } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 
 const inputClassName =
@@ -63,15 +63,17 @@ export default function ProfileSettings({
       profilePreferencesSchema.pick({
         firstName: true,
         lastName: true,
-        makeContactInfoPublic: true,
-        makePersonalInfoPublic: true,
+        profileVisibility: true,
+        showEmail: true,
+        showPhone: true,
       }),
     ),
     defaultValues: {
       firstName,
       lastName,
-      makeContactInfoPublic: initialPreferences.makeContactInfoPublic,
-      makePersonalInfoPublic: initialPreferences.makePersonalInfoPublic,
+      profileVisibility: initialPreferences.profileVisibility,
+      showEmail: initialPreferences.showEmail,
+      showPhone: initialPreferences.showPhone,
     },
   });
 
@@ -79,14 +81,33 @@ export default function ProfileSettings({
     quickEditForm.reset({
       firstName,
       lastName,
-      makeContactInfoPublic:
-        initialPreferences.makeContactInfoPublic ??
-        DEFAULT_PROFILE_PREFERENCES.makeContactInfoPublic,
-      makePersonalInfoPublic:
-        initialPreferences.makePersonalInfoPublic ??
-        DEFAULT_PROFILE_PREFERENCES.makePersonalInfoPublic,
+      profileVisibility:
+        initialPreferences.profileVisibility ??
+        DEFAULT_PROFILE_PREFERENCES.profileVisibility,
+      showEmail:
+        initialPreferences.showEmail ??
+        DEFAULT_PROFILE_PREFERENCES.showEmail,
+      showPhone:
+        initialPreferences.showPhone ??
+        DEFAULT_PROFILE_PREFERENCES.showPhone,
     });
   }, [firstName, initialPreferences, lastName, quickEditForm]);
+
+  const dirtyFields = quickEditForm.formState.dirtyFields;
+  const hasBasicDetailChanges = Boolean(
+    dirtyFields.firstName || dirtyFields.lastName,
+  );
+  const hasPreferenceChanges = Boolean(
+    dirtyFields.profileVisibility || dirtyFields.showEmail || dirtyFields.showPhone,
+  );
+  const showEmail = useWatch({
+    control: quickEditForm.control,
+    name: "showEmail",
+  });
+  const showPhone = useWatch({
+    control: quickEditForm.control,
+    name: "showPhone",
+  });
 
   const quickEditMutation = useMutation({
     mutationFn: (userData) => updateUserProfile({ userData, accessToken }),
@@ -138,8 +159,9 @@ export default function ProfileSettings({
   const savePreferences = () => {
     const values = quickEditForm.getValues();
     preferencesMutation.mutate({
-      makeContactInfoPublic: values.makeContactInfoPublic,
-      makePersonalInfoPublic: values.makePersonalInfoPublic,
+      profileVisibility: values.profileVisibility,
+      showEmail: values.showEmail,
+      showPhone: values.showPhone,
     });
   };
 
@@ -214,7 +236,7 @@ export default function ProfileSettings({
                   disabled={
                     quickEditMutation.isPending ||
                     quickEditForm.formState.isSubmitting ||
-                    !quickEditForm.formState.isDirty
+                    !hasBasicDetailChanges
                   }
                   className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#F75D1F] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#e0561b] disabled:cursor-not-allowed disabled:opacity-60"
                 >
@@ -243,29 +265,44 @@ export default function ProfileSettings({
         {preferencesError && <ErrorAlert error={preferencesError} />}
 
         <div className="space-y-4">
+          <div>
+            <label className="text-sm font-semibold text-gray-800">
+              Profile visibility
+            </label>
+            <select
+              className={inputClassName}
+              {...quickEditForm.register("profileVisibility")}
+              disabled={preferencesMutation.isPending}
+            >
+              <option value="public">Public</option>
+              <option value="private">Private</option>
+            </select>
+            {quickEditForm.formState.errors.profileVisibility?.message && (
+              <p className="mt-2 text-sm text-red-500">
+                {quickEditForm.formState.errors.profileVisibility.message}
+              </p>
+            )}
+          </div>
+
           <VisibilityToggle
-            label="Make contact info public"
-            description="Allow viewers of your profile to see your contact details."
-            checked={quickEditForm.watch("makeContactInfoPublic")}
+            label="Show email address"
+            description="Allow viewers of your profile to see your email address."
+            checked={showEmail}
             onChange={(event) =>
-              quickEditForm.setValue(
-                "makeContactInfoPublic",
-                event.target.checked,
-                { shouldDirty: true },
-              )
+              quickEditForm.setValue("showEmail", event.target.checked, {
+                shouldDirty: true,
+              })
             }
             disabled={preferencesMutation.isPending}
           />
           <VisibilityToggle
-            label="Make personal info public"
-            description="Allow viewers of your profile to see your personal details."
-            checked={quickEditForm.watch("makePersonalInfoPublic")}
+            label="Show phone number"
+            description="Allow viewers of your profile to see your phone number."
+            checked={showPhone}
             onChange={(event) =>
-              quickEditForm.setValue(
-                "makePersonalInfoPublic",
-                event.target.checked,
-                { shouldDirty: true },
-              )
+              quickEditForm.setValue("showPhone", event.target.checked, {
+                shouldDirty: true,
+              })
             }
             disabled={preferencesMutation.isPending}
           />
@@ -275,9 +312,7 @@ export default function ProfileSettings({
           <button
             type="button"
             onClick={savePreferences}
-            disabled={
-              preferencesMutation.isPending || !quickEditForm.formState.isDirty
-            }
+            disabled={preferencesMutation.isPending || !hasPreferenceChanges}
             className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#1F2937] px-5 py-3 text-sm font-semibold text-white transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-60"
           >
             {preferencesMutation.isPending ? "Saving..." : "Save visibility settings"}

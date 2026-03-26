@@ -11,14 +11,17 @@ export const updateUserPassword = async ({ userData, accessToken }) => {
 
 export const updateUserProfile = async ({ userData, accessToken }) => {
   return await axiosInstance.patch(
-    "/users/me/settings/profile",
+    "/users/me/settings/personal-info",
     userData,
     headers(accessToken),
   );
 };
 
 export const deleteAccount = async (accessToken) => {
-  return await axiosInstance.delete("/users/me/settings/account", headers(accessToken));
+  return await axiosInstance.delete(
+    "/users/me/settings/account",
+    headers(accessToken),
+  );
 };
 
 export const uploadAvatar = async ({ formData, accessToken }) => {

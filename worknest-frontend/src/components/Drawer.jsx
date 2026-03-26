@@ -1,16 +1,14 @@
 import { useState } from "react";
 import { Menu, X, LogOut } from "lucide-react";
-import { NavLink, useNavigate } from "react-router";
+import { NavLink } from "react-router";
 import { profileLinks, navLink, navAuthLink } from "@/libs/constant";
 import { useAuth } from "@/store";
-import Avatar from "@/components/Avatar"; // Import the new Avatar component
-import LogoutButton from "./Logout"; // Renamed to avoid confusion
+import Avatar from "@/components/Avatar";
+import LogoutButton from "./Logout";
 
 export default function Drawer() {
   const { user, logout } = useAuth();
   const [open, setOpen] = useState(false);
-  const navigate = useNavigate();
-
   const closeDrawer = () => setOpen(false);
 
   // Handle logout – assumes LogoutButton calls logout internally

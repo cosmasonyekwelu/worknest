@@ -25,7 +25,7 @@ export default function ResetPassword() {
     resolver: zodResolver(validateResetPasswordSchema),
   });
   const [error, setError] = useState(null);
-  const { user } = useAuth;
+  const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   // look for values on our url bar
@@ -51,7 +51,18 @@ export default function ResetPassword() {
     },
   });
   const onSubmit = (data) => {
-    const userData = { ...data, email, token };
+    if (!email || !token) {
+      const message = "Reset link is incomplete or has expired.";
+      setError(message);
+      toast.error(message);
+      return;
+    }
+
+    const userData = {
+      ...data,
+      email,
+      passwordResetToken: token,
+    };
     mutation.mutate(userData);
   };
 
@@ -92,9 +103,9 @@ export default function ResetPassword() {
           <button
             type="submit"
             className="bg-[rgba(247,95,32,1)] text-white mt-2 w-full rounded-lg h-11 hover:bg-[rgba(247,95,32,0.8)] flex items-center justify-center transition-all duration-300 cursor-pointer"
-            disabled={isSubmitting}
+            disabled={isSubmitting || mutation.isPending || !email || !token}
           >
-            {isSubmitting ? "Loading..." : "Continue"}
+            {isSubmitting || mutation.isPending ? "Loading..." : "Continue"}
           </button>
         </form>
       </div>

@@ -21,7 +21,7 @@ export const updateProfilePreferences = async ({
   accessToken,
 }) => {
   return await axiosInstance.patch(
-    "/users/me/settings/profile",
+    "/users/me/settings/profile-privacy",
     settingsData,
     headers(accessToken),
   );

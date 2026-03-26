@@ -156,12 +156,14 @@ export const validateUserSchema = z.object({
   email: z.string().email().optional(),
   phone: z
     .string()
-    .min(10, {
-      message: "Phone number must be at least 10 characters long",
+    .min(7, {
+      message: "Phone number must be at least 7 characters long",
     })
     .optional(),
   dateOfBirth: z.string().optional(),
-    country: z.string().optional(),
+  country: z.string().optional(),
+  language: z.string().min(1).max(40).optional(),
+  preferredCurrency: z.string().min(1).max(80).optional(),
   bio: z.string().max(1000).optional(),
 });
 

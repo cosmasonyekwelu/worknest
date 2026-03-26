@@ -120,8 +120,9 @@ export default function PersonalInfoSettings() {
 
   const submitPassword = (values) => {
     passwordMutation.mutate({
-      oldPassword: values.password,
+      password: values.password,
       newPassword: values.newPassword,
+      confirmPassword: values.confirmPassword,
     });
   };
 

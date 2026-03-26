@@ -35,6 +35,18 @@ const userSchema = new Schema(
       minlength: 5,
       maxlength: 25,
     },
+    language: {
+      type: String,
+      trim: true,
+      maxlength: 40,
+      default: "English",
+    },
+    preferredCurrency: {
+      type: String,
+      trim: true,
+      maxlength: 80,
+      default: "United States Dollar (USD)",
+    },
     avatar: {
       type: String,
       trim: true,

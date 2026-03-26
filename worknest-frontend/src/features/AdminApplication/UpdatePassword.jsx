@@ -37,7 +37,7 @@ export default function UpdatePassword() {
             logout();
             navigate("/auth/admin/login");
           }
-        } catch (error) {
+        } catch {
           queryClient.clear();
           logout();
           navigate("/auth/admin/login");

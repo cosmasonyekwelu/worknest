@@ -36,8 +36,8 @@ const JobForm = ({ job, onSave, onCancel }) => {
 
   useEffect(() => {
     if (job) {
-      setFormData({
-        ...formData,
+      setFormData((prev) => ({
+        ...prev,
         ...job,
         experienceLevel: job.experienceLevel || "Mid",
         salaryRange: job.salaryRange || { min: "", max: "" },
@@ -45,7 +45,7 @@ const JobForm = ({ job, onSave, onCancel }) => {
         requirement: job.requirement?.join("\n") || "",
         benefits: job.benefits?.join("\n") || "",
         applicationQuestions: job.applicationQuestions || [""],
-      });
+      }));
     }
   }, [job]);
 

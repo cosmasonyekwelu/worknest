@@ -65,8 +65,9 @@ export default function ChangePassword() {
 
   const onSubmit = (data) => {
     const userData = {
-      oldPassword: data.password, // 'password' from form is the old password
+      password: data.password,
       newPassword: data.newPassword,
+      confirmPassword: data.confirmPassword,
     };
     mutation.mutate({ userData, accessToken });
   };

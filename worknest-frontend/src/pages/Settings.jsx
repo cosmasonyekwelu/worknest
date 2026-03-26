@@ -65,15 +65,16 @@ export default function Settings() {
 
   const resolvedSettings = useMemo(() => {
     const data = settingsQuery.data?.data || {};
+    const userSettings = data?.settings || {};
 
     return {
       notifications: {
         ...DEFAULT_NOTIFICATION_SETTINGS,
-        ...(data?.notifications || {}),
+        ...(userSettings?.notifications || {}),
       },
       profilePreferences: {
         ...DEFAULT_PROFILE_PREFERENCES,
-        ...(data?.profile || {}),
+        ...(userSettings?.profilePrivacy || {}),
       },
     };
   }, [settingsQuery.data]);

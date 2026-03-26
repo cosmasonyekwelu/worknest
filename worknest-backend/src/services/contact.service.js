@@ -37,7 +37,7 @@ const contactMailService = {
     const htmlBody = `
       <p>Hi ${safeFullName},</p>
       <p>Thank you for reaching out to us. We have received your message and will get back to you soon.</p>
-      <p>— Worknest Team</p>
+      <p>- Worknest Team</p>
     `;
 
     return sendEmail({

@@ -68,14 +68,15 @@ const AdminJobs = () => {
   const totalPages = jobsResponse?.totalPages || 1;
 
   // Handle edit from location state
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (location.state?.editJob) {
       setEditingJob(location.state.editJob);
       setView("form");
-      // Clear the state
       navigate(location.pathname, { replace: true, state: {} });
     }
-  }, [location.state]);
+  }, [location.pathname, location.state, navigate]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
     const handleClickOutside = (event) => {

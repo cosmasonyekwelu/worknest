@@ -9,6 +9,7 @@ import { useMutation } from "@tanstack/react-query";
 import { registerUser } from "@/api/api";
 import { toast } from "sonner";
 import { useAuth } from "@/store";
+import { useWatch } from "react-hook-form";
 
 export default function Signup({ toggle }) {
   const [error, setError] = useState(null);
@@ -16,7 +17,7 @@ export default function Signup({ toggle }) {
   const {
     register,
     handleSubmit,
-    watch,
+    control,
     formState: { errors, isSubmitting },
   } = useForm({
     resolver: zodResolver(validatedSignUpSchema),
@@ -25,9 +26,9 @@ export default function Signup({ toggle }) {
     },
   });
 
-  const termsAgreed = watch("agreeToTerms");
+  const termsAgreed = useWatch({ control, name: "agreeToTerms" });
 
-  const { setAccessToken, user } = useAuth();
+  const { setAccessToken } = useAuth();
   const navigate = useNavigate();
   const mutation = useMutation({
     mutationFn: registerUser,

@@ -52,12 +52,9 @@ export const settingsPasswordSchema = z
   });
 
 export const notificationSettingsSchema = z.object({
-  newsAndUpdates: z.boolean(),
-  tipsAndTutorials: z.boolean(),
-  userResearch: z.boolean(),
-  comments: z.enum(["none", "mentions", "all"]),
-  reminders: z.enum(["none", "important", "all"]),
-  activityAboutYou: z.enum(["none", "all"]),
+  email: z.boolean(),
+  push: z.boolean(),
+  marketing: z.boolean(),
 });
 
 export const profilePreferencesSchema = z.object({
@@ -67,6 +64,7 @@ export const profilePreferencesSchema = z.object({
   lastName: z.string().min(2, {
     message: "Last name must be at least 2 characters long",
   }),
-  makeContactInfoPublic: z.boolean(),
-  makePersonalInfoPublic: z.boolean(),
+  profileVisibility: z.enum(["public", "private"]),
+  showEmail: z.boolean(),
+  showPhone: z.boolean(),
 });
