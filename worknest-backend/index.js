@@ -10,8 +10,16 @@ import logger from "./src/config/logger.js";
 import { gracefulShutdown, isDatabaseReady } from "./src/config/db.server.js";
 import { validateEnv } from "./src/config/env.js";
 import { apiLimiter } from "./src/middleware/rateLimit.js";
-import { buildCorsOptions, allowedOrigins, enforceHttpsMiddleware } from "./src/middleware/security.js";
-import { requestMetricsMiddleware, buildPrometheusMetrics, getMetricsSnapshot } from "./src/middleware/metrics.js";
+import {
+  buildCorsOptions,
+  allowedOrigins,
+  enforceHttpsMiddleware,
+} from "./src/middleware/security.js";
+import {
+  requestMetricsMiddleware,
+  buildPrometheusMetrics,
+  getMetricsSnapshot,
+} from "./src/middleware/metrics.js";
 import { requestIdMiddleware } from "./src/middleware/requestId.js";
 import {
   catchNotFound,
@@ -21,7 +29,6 @@ import {
 dotenv.config();
 validateEnv();
 
-// api routes
 import userRoutes from "./src/routes/userRoutes.js";
 import adminRoutes from "./src/routes/adminRoutes.js";
 import jobRoutes from "./src/routes/jobRoutes.js";
@@ -55,13 +62,19 @@ app.use((req, res, next) => {
   next();
 });
 
+const baseHealthPayload = (requestTime) => ({
+  status: "success",
+  message: "Welcome to Worknest Backend API",
+  environment: process.env.NODE_ENV,
+  timestamp: requestTime,
+});
+
 app.get("/", (req, res) => {
-  res.status(200).json({
-    status: "success",
-    message: "Welcome to Worknest Backend API",
-    environment: process.env.NODE_ENV,
-    timestamp: req.requestTime,
-  });
+  res.status(200).json(baseHealthPayload(req.requestTime));
+});
+
+app.head("/", (req, res) => {
+  res.status(200).end();
 });
 
 const verifyMonitoringToken = (req, res, next) => {
@@ -69,7 +82,9 @@ const verifyMonitoringToken = (req, res, next) => {
   const providedToken = req.get("x-monitoring-token");
 
   if (!expectedToken) {
-    logger.warn("Monitoring endpoint requested without MONITORING_TOKEN configured");
+    logger.warn(
+      "Monitoring endpoint requested without MONITORING_TOKEN configured",
+    );
     return res.status(503).json({ error: "Monitoring is not configured" });
   }
 
@@ -86,7 +101,9 @@ app.get("/metrics", verifyMonitoringToken, (req, res) => {
 });
 
 app.get("/metrics/snapshot", verifyMonitoringToken, (req, res) => {
-  res.status(200).json({ status: "ok", data: getMetricsSnapshot(), timestamp: req.requestTime });
+  res
+    .status(200)
+    .json({ status: "ok", data: getMetricsSnapshot(), timestamp: req.requestTime });
 });
 
 app.get("/health", (req, res) => {
@@ -129,7 +146,6 @@ app.get("/health/ready", (req, res) => {
   });
 });
 
-// assemble routes
 app.use("/api/v1/auth", userRoutes);
 app.use("/api/v1/admin", adminRoutes);
 app.use("/api/v1/jobs", jobRoutes);
@@ -142,18 +158,18 @@ app.use("/api/v1/resume", resumeRoutes);
 app.use(catchNotFound);
 app.use(globalErrorHandler);
 
-const PORT = process.env.PORT || 5000;
+const PORT = Number(process.env.PORT) || 5000;
 
 const startServer = async () => {
   try {
     const server = app.listen(PORT, "0.0.0.0", () => {
       logger.info(
-        `✅ Server running in ${process.env.NODE_ENV} mode on port ${PORT}`,
+        `Server running in ${process.env.NODE_ENV} mode on port ${PORT}`,
       );
-      logger.info(`🌐 http://localhost:${PORT}`);
+      logger.info(`Listening on http://0.0.0.0:${PORT}`);
     });
 
-    process.on("unhandledRejection", (reason) => {
+    process.once("unhandledRejection", (reason) => {
       const error =
         reason instanceof Error
           ? `${reason.name}: ${reason.message}`
@@ -161,14 +177,24 @@ const startServer = async () => {
 
       logger.error("Unhandled rejection. Shutting down.", { error });
 
-      gracefulShutdown(server).finally(() => process.exit(1));
+      gracefulShutdown(server)
+        .catch(() => null)
+        .finally(() => process.exit(1));
     });
 
-    process.on("SIGTERM", () => gracefulShutdown(server));
-    process.on("SIGINT", () => gracefulShutdown(server));
+    const handleSignal = () => {
+      gracefulShutdown(server)
+        .catch(() => null)
+        .finally(() => process.exit(0));
+    };
+
+    process.once("SIGTERM", handleSignal);
+    process.once("SIGINT", handleSignal);
 
     server.on("error", (error) => {
-      if (error.syscall !== "listen") throw error;
+      if (error.syscall !== "listen") {
+        throw error;
+      }
 
       switch (error.code) {
         case "EACCES":
@@ -186,7 +212,7 @@ const startServer = async () => {
   } catch (error) {
     const errorMessage =
       error instanceof Error ? error.message : "Unknown error";
-    logger.error(`❌ Failed to start server: ${errorMessage}`);
+    logger.error(`Failed to start server: ${errorMessage}`);
     process.exit(1);
   }
 };
