@@ -5,8 +5,12 @@ import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../AuthProvider";
 import { useAuth } from "..";
-import axiosInstance, { refreshClient } from "@/utils/axiosInstance";
+import axiosInstance from "@/utils/axiosInstance";
 import { getAuthenticatedUser, refreshAccessToken } from "@/api/api";
+import {
+  getAuthenticatedAdmin,
+  refreshAdminAccessToken,
+} from "@/api/admin";
 
 vi.mock("@/api/api", () => ({
   getAuthenticatedUser: vi.fn(),
@@ -71,7 +75,18 @@ describe("AuthProvider", () => {
       data: {
         data: {
           id: "user-1",
-          role: "user",
+          role: "applicant",
+          isVerified: true,
+        },
+      },
+    });
+
+    vi.mocked(getAuthenticatedAdmin).mockResolvedValue({
+      status: 200,
+      data: {
+        data: {
+          id: "admin-1",
+          role: "admin",
           isVerified: true,
         },
       },
@@ -84,21 +99,21 @@ describe("AuthProvider", () => {
   });
 
   it("refreshes the access token after a 401 response and retries the request", async () => {
-    vi.mocked(refreshAccessToken).mockResolvedValue({
-      data: {
+    vi.mocked(refreshAccessToken)
+      .mockResolvedValueOnce({
         data: {
-          accessToken: "initial-token",
+          data: {
+            accessToken: "initial-token",
+          },
         },
-      },
-    });
-
-    const refreshPostSpy = vi.spyOn(refreshClient, "post").mockResolvedValue({
-      data: {
+      })
+      .mockResolvedValueOnce({
         data: {
-          accessToken: "refreshed-token",
+          data: {
+            accessToken: "refreshed-token",
+          },
         },
-      },
-    });
+      });
 
     axiosMock.onGet("/jobs/protected").reply((config) => {
       if (config.headers?.Authorization === "Bearer initial-token") {
@@ -128,11 +143,7 @@ describe("AuthProvider", () => {
       expect(screen.getByTestId("auth-state")).toHaveTextContent("refreshed-token");
     });
 
-    expect(refreshPostSpy).toHaveBeenCalledWith(
-      "/auth/refresh-token",
-      null,
-      { withCredentials: true },
-    );
+    expect(refreshAccessToken).toHaveBeenCalledTimes(2);
     expect(getAuthenticatedUser).toHaveBeenCalledWith("initial-token");
     expect(getItemSpy).not.toHaveBeenCalled();
     expect(setItemSpy).not.toHaveBeenCalled();
@@ -140,15 +151,15 @@ describe("AuthProvider", () => {
   });
 
   it("logs out when the refresh attempt fails", async () => {
-    vi.mocked(refreshAccessToken).mockResolvedValue({
-      data: {
+    vi.mocked(refreshAccessToken)
+      .mockResolvedValueOnce({
         data: {
-          accessToken: "initial-token",
+          data: {
+            accessToken: "initial-token",
+          },
         },
-      },
-    });
-
-    vi.spyOn(refreshClient, "post").mockRejectedValue(new Error("refresh failed"));
+      })
+      .mockRejectedValueOnce(new Error("refresh failed"));
 
     axiosMock.onGet("/jobs/protected").reply(401, { message: "expired" });
 
@@ -171,5 +182,30 @@ describe("AuthProvider", () => {
     expect(getItemSpy).not.toHaveBeenCalled();
     expect(setItemSpy).not.toHaveBeenCalled();
     expect(removeItemSpy).not.toHaveBeenCalled();
+  });
+
+  it("restores an admin session on load without relying on the current path", async () => {
+    vi.mocked(refreshAccessToken).mockRejectedValueOnce({
+      response: { status: 401 },
+    });
+    vi.mocked(refreshAdminAccessToken).mockResolvedValueOnce({
+      data: {
+        data: {
+          accessToken: "admin-token",
+        },
+      },
+    });
+
+    renderAuthProvider("/admin");
+
+    await waitFor(() => {
+      expect(screen.getByTestId("auth-state")).toHaveTextContent("admin-token");
+      expect(screen.getByTestId("auth-state")).toHaveTextContent("admin-1");
+      expect(screen.getByTestId("auth-state")).toHaveTextContent("admin");
+    });
+
+    expect(refreshAccessToken).toHaveBeenCalled();
+    expect(refreshAdminAccessToken).toHaveBeenCalled();
+    expect(getAuthenticatedAdmin).toHaveBeenCalledWith("admin-token");
   });
 });

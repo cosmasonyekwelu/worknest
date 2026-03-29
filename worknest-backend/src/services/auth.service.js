@@ -3,6 +3,7 @@ import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import mailService from "./email.service.js";
 import jwt from "jsonwebtoken";
+import { OAuth2Client } from "google-auth-library";
 import logger from "../config/logger.js";
 import { getJwtSecrets } from "../config/env.js";
 import { AppError, ConflictError, UnauthorizedError, NotFoundError } from "../lib/errors.js";
@@ -16,6 +17,13 @@ import {
   LEGACY_USER_REFRESH_COOKIE_PATH,
   USER_REFRESH_COOKIE_NAME,
 } from "../lib/token.js";
+
+const GOOGLE_ISSUERS = new Set([
+  "accounts.google.com",
+  "https://accounts.google.com",
+]);
+
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 const authService = {
   // registration service
@@ -129,6 +137,86 @@ const authService = {
     if (!user.refreshTokenExpiresAt || user.refreshTokenExpiresAt < new Date()) {
       await invalidateRefreshTokenState(user._id, true);
       throw new UnauthorizedError("Refresh token has expired");
+    }
+
+    return user;
+  },
+
+  loginWithGoogle: async ({ googleJWT, nonce }) => {
+    if (!process.env.GOOGLE_CLIENT_ID) {
+      throw new AppError("Google sign-in is not configured", 503);
+    }
+
+    const ticket = await googleClient.verifyIdToken({
+      idToken: googleJWT,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+    if (!payload?.email) {
+      throw new UnauthorizedError("Unable to verify Google account");
+    }
+
+    if (!GOOGLE_ISSUERS.has(payload.iss)) {
+      throw new UnauthorizedError("Invalid Google token issuer");
+    }
+
+    if (!payload.email_verified) {
+      throw new UnauthorizedError("Google account email is not verified");
+    }
+
+    if (nonce && payload.nonce !== nonce) {
+      throw new UnauthorizedError("Invalid Google sign-in nonce");
+    }
+
+    const normalizedEmail = payload.email.toLowerCase().trim();
+    let user = await User.findOne({ email: normalizedEmail }).select(
+      "+tokenVersion",
+    );
+
+    if (user?.role === "admin") {
+      throw new AppError("Use Admin Route.", 403);
+    }
+
+    if (!user) {
+      const placeholderPassword = crypto.randomBytes(32).toString("hex");
+      const salt = await bcrypt.genSalt(12);
+      const hashedPassword = await bcrypt.hash(placeholderPassword, salt);
+
+      user = await User.create({
+        email: normalizedEmail,
+        fullname: payload.name?.trim() || normalizedEmail.split("@")[0],
+        role: "applicant",
+        password: hashedPassword,
+        isVerified: true,
+      });
+
+      process.nextTick(() => {
+        mailService.sendWelcomeMail(user).catch((error) => {
+          logger.error("Failed to send welcome email to Google user", {
+            error: error.message,
+            userId: user._id?.toString(),
+          });
+        });
+      });
+    } else {
+      let shouldSave = false;
+
+      if (!user.isVerified) {
+        user.isVerified = true;
+        user.verificationToken = undefined;
+        user.verificationTokenExpiry = undefined;
+        shouldSave = true;
+      }
+
+      if (!user.fullname && payload.name?.trim()) {
+        user.fullname = payload.name.trim();
+        shouldSave = true;
+      }
+
+      if (shouldSave) {
+        await user.save();
+      }
     }
 
     return user;

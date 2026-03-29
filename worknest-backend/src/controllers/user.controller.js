@@ -9,7 +9,7 @@ export const forgotPassword = tryCatchFn(async (req, res) => {
   return successResponse(
     res,
     null,
-    "Password reset link has been sent to your email",
+    "If an account exists, a password reset link has been sent.",
     200
   );
 });

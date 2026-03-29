@@ -18,9 +18,9 @@ import {
   updatePasswordSchema,
   validateAdminProfile,
 } from "../lib/dataSchema.js";
-import { verifyAuth, authorizedRoles } from "../middleware/authenticate.js";
+import { optionalAuth, verifyAuth, authorizedRoles } from "../middleware/authenticate.js";
 import { cacheMiddleware, clearCache } from "../middleware/cache.js";
-import uploadImage from "../middleware/uploadImage.js";
+import uploadImage, { validateUploadedImage } from "../middleware/uploadImage.js";
 
 const router = express.Router();
 
@@ -56,7 +56,8 @@ router.patch(
   "/upload-avatar",
   verifyAuth,
   authorizedRoles("admin"),
-    uploadImage.single("avatar"),
+  uploadImage.single("avatar"),
+  validateUploadedImage,
   clearCache("admin_profile"),
   adminUploadAvatar,
 );
@@ -95,6 +96,6 @@ router.get(
   getAllUsers,
 );
 
-router.post("/logout", verifyAuth, clearCache("admin_profile"), logoutAdmin);
+router.post("/logout", optionalAuth, clearCache("admin_profile"), logoutAdmin);
 
 export default router;

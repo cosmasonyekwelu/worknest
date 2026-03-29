@@ -5,6 +5,7 @@ import tryCatchFn from "../lib/tryCatchFn.js";
 import responseHandler from "../lib/responseHandler.js";
 import Jobs from "../models/jobs.js";
 import User from "../models/user.js";
+import Application from "../models/application.js";
 import { jobValidation } from "../validation/job.validation.js";
 import { NotFoundError, ValidationError } from "../lib/errors.js";
 import { ZodError } from "zod";
@@ -70,6 +71,13 @@ const createJobs = tryCatchFn(async (req, res) => {
   }
 
   const job = await Jobs.create({ ...payload, avatar: avatarUrl, avatarId });
+  await Application.updateMany(
+    { job: job._id },
+    {
+      jobTitle: job.title,
+      companyName: job.companyName,
+    },
+  );
 
   return successResponse(res, job, "Job created successfully", 201);
 });
@@ -164,6 +172,14 @@ const updateJob = tryCatchFn(async (req, res) => {
     job.avatarId = uploaded.public_id;
     await job.save();
   }
+
+  await Application.updateMany(
+    { job: job._id },
+    {
+      jobTitle: job.title,
+      companyName: job.companyName,
+    },
+  );
 
   return successResponse(res, job, "Job updated successfully", 200);
 });

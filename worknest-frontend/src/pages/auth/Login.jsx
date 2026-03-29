@@ -39,7 +39,7 @@ export default function Login() {
       console.log(response);
       toast.success(response?.data?.data?.message || "Login successful");
       const token = response?.data?.data?.accessToken;
-      setAccessToken(token);
+      setAccessToken(token, "user");
       navigate(from, { replace: true });
     },
     onError: (error) => {

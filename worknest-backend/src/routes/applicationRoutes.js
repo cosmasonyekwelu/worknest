@@ -11,10 +11,14 @@ import {
   submitInterview,
   updatePersonalInfo,
 } from "../controllers/application.controller.js";
-import { authorizedRoles, verifyAuth } from "../middleware/authenticate.js";
+import {
+  authorizedRoles,
+  requireVerifiedUser,
+  verifyAuth,
+} from "../middleware/authenticate.js";
 import { validateRequest } from "../middleware/validateRequest.js";
 import { applicationValidation } from "../validation/application.validation.js";
-import upload from "../middleware/upload.js";
+import upload, { validateUploadedResume } from "../middleware/upload.js";
 import { applyJobLimiter } from "../middleware/rateLimit.js";
 
 const router = express.Router();
@@ -23,9 +27,11 @@ router.post(
   "/:jobId/apply",
   verifyAuth,
   authorizedRoles("applicant"),
+  requireVerifiedUser,
   validateRequest(applicationValidation.idParam, "params"),
   applyJobLimiter,
   upload.single("resume"),
+  validateUploadedResume,
   applyForJob,
 );
 
@@ -33,6 +39,7 @@ router.get(
   "/me",
   verifyAuth,
   authorizedRoles("applicant"),
+  requireVerifiedUser,
   validateRequest(applicationValidation.paginationQuery, "query"),
   getMyApplications,
 );
@@ -48,6 +55,7 @@ router.post(
   "/:id/submit-interview",
   verifyAuth,
   authorizedRoles("applicant"),
+  requireVerifiedUser,
   validateRequest(applicationValidation.idParam, "params"),
   validateRequest(applicationValidation.submitInterview),
   submitInterview,
@@ -74,6 +82,7 @@ router.get(
   "/:id",
   verifyAuth,
   authorizedRoles("applicant", "admin"),
+  requireVerifiedUser,
   validateRequest(applicationValidation.idParam, "params"),
   getApplication,
 );

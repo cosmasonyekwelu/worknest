@@ -8,9 +8,9 @@ import {
   updateUserPassword,
   uploadAvatar,
 } from "../controllers/user.controller.js";
-import { verifyAuth } from "../middleware/authenticate.js";
+import { requireVerifiedUser, verifyAuth } from "../middleware/authenticate.js";
 import { cacheMiddleware, clearCache } from "../middleware/cache.js";
-import uploadImage from "../middleware/uploadImage.js";
+import uploadImage, { validateUploadedImage } from "../middleware/uploadImage.js";
 import { validateFormData } from "../middleware/validateForm.js";
 import {
   updatePasswordSchema,
@@ -26,6 +26,7 @@ router.get("/", verifyAuth, cacheMiddleware("auth_user_settings", 3600), authent
 router.patch(
   "/personal-info",
   verifyAuth,
+  requireVerifiedUser,
   validateFormData(validateUserSchema),
   clearCache("auth_user"),
   clearCache("auth_user_settings"),
@@ -35,6 +36,7 @@ router.patch(
 router.patch(
   "/notifications",
   verifyAuth,
+  requireVerifiedUser,
   validateFormData(validateNotificationSettingsSchema),
   clearCache("auth_user_settings"),
   updateNotificationSettings,
@@ -43,6 +45,7 @@ router.patch(
 router.patch(
   "/profile-privacy",
   verifyAuth,
+  requireVerifiedUser,
   validateFormData(validateProfilePrivacySchema),
   clearCache("auth_user_settings"),
   updateProfilePrivacySettings,
@@ -51,6 +54,7 @@ router.patch(
 router.patch(
   "/password",
   verifyAuth,
+  requireVerifiedUser,
   validateFormData(updatePasswordSchema),
   clearCache("auth_user"),
   clearCache("auth_user_settings"),
@@ -60,7 +64,9 @@ router.patch(
 router.patch(
   "/avatar",
   verifyAuth,
+  requireVerifiedUser,
   uploadImage.single("avatar"),
+  validateUploadedImage,
   clearCache("auth_user"),
   clearCache("auth_user_settings"),
   uploadAvatar,
@@ -69,6 +75,7 @@ router.patch(
 router.delete(
   "/account",
   verifyAuth,
+  requireVerifiedUser,
   clearCache("auth_user"),
   clearCache("auth_user_settings"),
   deleteAccount,

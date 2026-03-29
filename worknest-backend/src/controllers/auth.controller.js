@@ -39,6 +39,23 @@ export const login = tryCatchFn(async (req, res) => {
   return successResponse(res, { accessToken }, "Login successful", 200);
 });
 
+export const googleLogin = tryCatchFn(async (req, res) => {
+  const user = await authService.loginWithGoogle(req.body);
+  const { accessToken, refreshToken } = createSendToken(
+    user,
+    user.tokenVersion || 0,
+  );
+  await authService.issueAndPersistRefreshToken(user._id, refreshToken);
+  setRefreshTokenCookie(
+    res,
+    req,
+    USER_REFRESH_COOKIE_NAME,
+    refreshToken,
+    [LEGACY_USER_REFRESH_COOKIE_PATH],
+  );
+  return successResponse(res, { accessToken }, "Login successful", 200);
+});
+
 export const authenticateUser = tryCatchFn(async (req, res) => {
   const { id: userId } = req.user;
   const user = await authService.authenticateUser(userId);
@@ -89,6 +106,6 @@ export const resendVerificationToken = tryCatchFn(async (req, res) => {
 });
 
 export const logout = tryCatchFn(async (req, res) => {
-  const responseData = await authService.logout(req, res, req.user._id);
+  const responseData = await authService.logout(req, res, req.user?._id);
   return successResponse(res, responseData, "Logged out successfully", 200);
 });

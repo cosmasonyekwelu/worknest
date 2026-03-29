@@ -29,7 +29,7 @@ export default function AdminLogin() {
     mutationFn: loginAdmin,
     onSuccess: (response) => {
       toast.success(response?.data?.data?.message || "Login successful");
-      setAccessToken(response?.data?.data?.accessToken);
+      setAccessToken(response?.data?.data?.accessToken, "admin");
     },
     onError: (error) => {
       import.meta.env.DEV && console.log(error);

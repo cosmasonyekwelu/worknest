@@ -31,6 +31,7 @@ JWT_REFRESH_SECRET_KEY=change_me_refresh
 JWT_ACCESS_TOKEN_EXPIRES=15m
 JWT_REFRESH_TOKEN_EXPIRES=7d
 MONITORING_TOKEN=change_me_monitoring_token
+GOOGLE_CLIENT_ID=your_google_oauth_client_id
 
 BREVO_API_KEY=...
 BREVO_SENDER_EMAIL=no-reply@example.com
@@ -49,7 +50,9 @@ AI_SHORTLIST_THRESHOLD=50
 - In production, HTTP requests are rejected unless `x-forwarded-proto=https` or direct TLS is used.
 - CORS is allowlist-based from `CLIENT_URL`.
 - Refresh token endpoints accept the refresh token from the secure cookie only.
+- Applicant-only write flows require verified accounts at the API layer.
 - Metrics endpoints require an `x-monitoring-token` header that matches `MONITORING_TOKEN`.
+- Resume and image uploads validate file signatures, not just client-supplied MIME types.
 
 ## Operational Endpoints
 - `GET /health` and `GET /health/live`

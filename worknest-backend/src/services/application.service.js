@@ -8,6 +8,14 @@ import { generateInterviewQuestions, reviewApplication, scoreInterviewAnswers } 
 const AI_SHORTLIST_THRESHOLD = Number(process.env.AI_SHORTLIST_THRESHOLD || 50);
 
 const REQUIRED_PERSONAL_INFO_FIELDS = ["firstname", "lastname", "email"];
+const buildApplicationKeywordQuery = (keyword = "") => {
+  const trimmedKeyword = keyword.trim();
+  if (!trimmedKeyword) {
+    return null;
+  }
+
+  return { $text: { $search: trimmedKeyword } };
+};
 
 const assertRequiredPersonalInfo = (application) => {
   const personalInfo = application?.personalInfo || {};
@@ -25,9 +33,16 @@ const assertRequiredPersonalInfo = (application) => {
 // ------------------------------------------------------------
 export const createApplication = async (applicantId, jobId, applicationData) => {
   try {
-    const job = await Jobs.findById(jobId);
+    const [job, applicant] = await Promise.all([
+      Jobs.findById(jobId).select("title companyName"),
+      User.findById(applicantId).select("fullname email"),
+    ]);
+
     if (!job) {
       throw new NotFoundError("Job not found");
+    }
+    if (!applicant) {
+      throw new NotFoundError("Applicant not found");
     }
 
     if (job.applicationQuestions?.length) {
@@ -61,6 +76,10 @@ export const createApplication = async (applicantId, jobId, applicationData) => 
       job: jobId,
       ...rest,
       personalInfo,
+      applicantName: applicant.fullname,
+      applicantEmail: applicant.email,
+      jobTitle: job.title,
+      companyName: job.companyName,
       statusHistory: [{
         status: "submitted",
         changedAt: new Date(),
@@ -218,6 +237,8 @@ export const updateApplicationPersonalInfo = async (applicationId, adminId, pers
   }
 
   application.personalInfo = updatedPersonalInfo;
+  application.applicantName = `${updatedPersonalInfo.firstname} ${updatedPersonalInfo.lastname}`.trim();
+  application.applicantEmail = updatedPersonalInfo.email.toLowerCase().trim();
   application.statusHistory.push({
     status: application.status,
     changedAt: new Date(),
@@ -306,27 +327,9 @@ export const getAllApplications = async (filters = {}, page = 1, limit = 10) => 
     if (endDate) query.createdAt.$lte = new Date(endDate);
   }
 
-  if (keyword) {
-    const trimmedKeyword = keyword.trim();
-    if (trimmedKeyword) {
-      const users = await User.find({
-        $or: [
-          { fullname: { $regex: trimmedKeyword, $options: "i" } },
-          { email: { $regex: trimmedKeyword, $options: "i" } },
-        ],
-      }).select("_id");
-      const userIds = users.map(u => u._id);
-
-      const jobs = await Jobs.find({
-        title: { $regex: trimmedKeyword, $options: "i" },
-      }).select("_id");
-      const jobIds = jobs.map(j => j._id);
-
-      query.$or = [
-        { applicant: { $in: userIds } },
-        { job: { $in: jobIds } },
-      ];
-    }
+  const keywordQuery = buildApplicationKeywordQuery(keyword);
+  if (keywordQuery) {
+    Object.assign(query, keywordQuery);
   }
 
   const skip = (page - 1) * safeLimit;
@@ -467,6 +470,7 @@ export const getApplicationStats = async (jobId = null) => {
 };
 
 export default {
+  buildApplicationKeywordQuery,
   createApplication,
   processNewApplication,
   submitInterviewAnswers,

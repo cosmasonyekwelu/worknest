@@ -16,6 +16,24 @@ import {
   LEGACY_ADMIN_REFRESH_COOKIE_PATH,
 } from "../lib/token.js";
 
+export const buildUserSearchQuery = (query = "", role = "") => {
+  const searchQuery = {};
+  const trimmedKeyword = String(query || "").trim();
+  const normalizedRole = String(role || "")
+    .trim()
+    .toLowerCase();
+
+  if (normalizedRole && normalizedRole !== "all") {
+    searchQuery.role = normalizedRole;
+  }
+
+  if (trimmedKeyword) {
+    searchQuery.$text = { $search: trimmedKeyword };
+  }
+
+  return searchQuery;
+};
+
 const adminService = {
   // admin login service - only admins can login
   adminLogin: async (req) => {
@@ -115,43 +133,34 @@ const adminService = {
   },
 
   getAllUsers: async (page = 1, limit = 3, query = "", role = "") => {
-    const sanitizeQuery =
-      query || role
-        ? (query || role).toLowerCase().replace(/[^\w\s]/gi, "")
-        : "";
-    const [users, total] = sanitizeQuery
-      ? await Promise.all([
-          User.find({
-            $or: [
-              { fullname: { $regex: sanitizeQuery, $options: "i" } },
-              { role: { $regex: sanitizeQuery, $options: "i" } },
-            ],
-          })
-            .sort({ createdAt: -1 })
-            .skip((page - 1) * limit)
-            .limit(limit),
-          User.countDocuments({
-            $or: [
-              { fullname: { $regex: sanitizeQuery, $options: "i" } },
-              { role: { $regex: sanitizeQuery, $options: "i" } },
-            ],
-          }),
-        ])
-      : await Promise.all([
-          User.find()
-            .sort({ createdAt: -1 })
-            .skip((page - 1) * limit)
-            .limit(limit),
-          User.countDocuments(),
-        ]);
+    const safeLimit = Math.min(Math.max(1, Number(limit) || 3), 100);
+    const safePage = Math.max(1, Number(page) || 1);
+    const searchQuery = buildUserSearchQuery(query, role);
+
+    const userQuery = User.find(searchQuery)
+      .sort({ createdAt: -1 })
+      .skip((safePage - 1) * safeLimit)
+      .limit(safeLimit);
+
+    if (searchQuery.$text) {
+      userQuery.select({ score: { $meta: "textScore" } }).sort({
+        score: { $meta: "textScore" },
+        createdAt: -1,
+      });
+    }
+
+    const [users, total] = await Promise.all([
+      userQuery,
+      User.countDocuments(searchQuery),
+    ]);
 
     return {
       meta: {
-        currentPage: page,
-        totalPages: Math.ceil(total / limit),
+        currentPage: safePage,
+        totalPages: Math.ceil(total / safeLimit),
         total,
-        hasMore: (page - 1) * limit + users.length < total,
-        limit,
+        hasMore: (safePage - 1) * safeLimit + users.length < total,
+        limit: safeLimit,
       },
       users,
     };

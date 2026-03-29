@@ -1,59 +1,100 @@
 import axiosInstance from "@/utils/axiosInstance";
 import { headers } from "@/utils/constant";
 import { getAllJobs } from "@/api/api";
+import { z } from "zod";
 
-const parseNumericMeta = (...values) => {
-  for (const value of values) {
-    if (value === null || value === undefined || value === "") {
-      continue;
+const applicationAnswerSchema = z.object({
+  question: z.string().optional(),
+  answer: z.string().optional(),
+  score: z.number().nullable().optional(),
+});
+
+const jobReferenceSchema = z.union([
+  z.string(),
+  z.object({
+    _id: z.string().optional(),
+    id: z.string().optional(),
+    title: z.string().optional(),
+    companyName: z.string().optional(),
+    company: z.string().optional(),
+    companyLogo: z.any().optional(),
+    logo: z.any().optional(),
+    location: z.string().optional(),
+    createdAt: z.string().optional(),
+  }),
+]);
+
+const applicationSchema = z.object({
+  _id: z.string().optional(),
+  id: z.string().optional(),
+  status: z.string().optional(),
+  createdAt: z.string().optional(),
+  resume: z.string().optional(),
+  resumeUrl: z.string().optional(),
+  portfolioUrl: z.string().optional(),
+  linkedinUrl: z.string().optional(),
+  answers: z.union([z.array(applicationAnswerSchema), z.string()]).optional(),
+  interview_questions: z.array(applicationAnswerSchema).optional(),
+  ai_score: z.number().nullable().optional(),
+  ai_feedback: z.string().optional(),
+  interview_score: z.number().nullable().optional(),
+  ai_processing_status: z.string().optional(),
+  personalInfo: z.union([z.record(z.string(), z.any()), z.string()]).optional(),
+  internalNote: z.string().optional(),
+  note: z.string().optional(),
+  applicantName: z.string().optional(),
+  applicant: z
+    .object({
+      email: z.string().optional(),
+      phone: z.string().optional(),
+      location: z.string().optional(),
+    })
+    .passthrough()
+    .optional(),
+  userId: z
+    .object({
+      fullName: z.string().optional(),
+      email: z.string().optional(),
+    })
+    .passthrough()
+    .optional(),
+  jobId: jobReferenceSchema.optional(),
+  job: jobReferenceSchema.optional(),
+  jobTitle: z.string().optional(),
+  companyName: z.string().optional(),
+  company: z.string().optional(),
+  companyLogo: z.any().optional(),
+  logo: z.any().optional(),
+  jobLocation: z.string().optional(),
+  location: z.string().optional(),
+});
+
+const paginatedApplicationsSchema = z.object({
+  data: z.array(applicationSchema),
+  total: z.number().nonnegative(),
+  page: z.number().positive(),
+  totalPages: z.number().positive(),
+});
+
+const apiEnvelope = (schema) =>
+  z.object({
+    success: z.literal(true),
+    message: z.string().optional(),
+    data: schema,
+  });
+
+const parseEnvelope = (schema, response, label) => {
+  const parsed = apiEnvelope(schema).safeParse(response.data);
+
+  if (!parsed.success) {
+    if (import.meta.env.DEV) {
+      console.error(`API contract violation for ${label}`, parsed.error);
     }
-    const parsedValue = Number(value);
-    if (Number.isFinite(parsedValue) && parsedValue >= 0) {
-      return parsedValue;
-    }
-  }
-  return null;
-};
 
-const getPaginationMeta = ({
-  body,
-  rawData,
-  itemsLength,
-  page,
-  limit,
-}) => {
-  const total = parseNumericMeta(
-    rawData?.totalApplications,
-    rawData?.total,
-    rawData?.pagination?.total,
-    body?.totalApplications,
-    body?.total,
-    body?.pagination?.total,
-    body?.data?.totalApplications,
-    body?.data?.total,
-  );
-
-  let totalPages = parseNumericMeta(
-    rawData?.totalPages,
-    rawData?.pagination?.totalPages,
-    body?.totalPages,
-    body?.pagination?.totalPages,
-    body?.data?.totalPages,
-  );
-
-  if (totalPages === null && total !== null && limit > 0) {
-    totalPages = Math.max(1, Math.ceil(total / limit));
+    throw new Error("Invalid response from server");
   }
 
-  if (totalPages === null) {
-    totalPages = itemsLength === limit ? page + 1 : page;
-  }
-
-  return {
-    total:
-      total !== null ? total : Math.max((page - 1) * limit + itemsLength, 0),
-    totalPages: Math.max(1, totalPages),
-  };
+  return parsed.data.data;
 };
 
 export const normalizeApplication = (app) => {
@@ -169,35 +210,23 @@ export const getMyApplications = async ({
     ...headers(accessToken),
   });
 
-  const body = res.data;
-  const rawData =
-    res.data?.data?.data ||
-    res.data?.data ||
-    res.data?.applications ||
-    res.data ||
-    [];
-  const applications = Array.isArray(rawData)
-    ? rawData
-    : rawData.applications || [];
+  const parsedData = parseEnvelope(
+    paginatedApplicationsSchema,
+    res,
+    "getMyApplications",
+  );
 
   const normalizedData = await enrichApplicationsWithJobs(
-    applications,
+    parsedData.data,
     accessToken,
   );
-  const paginationMeta = getPaginationMeta({
-    body,
-    rawData,
-    itemsLength: normalizedData.length,
-    page,
-    limit,
-  });
 
   return {
     items: normalizedData,
     data: normalizedData,
-    total: paginationMeta.total,
-    totalPages: paginationMeta.totalPages,
-    page,
+    total: parsedData.total,
+    totalPages: parsedData.totalPages,
+    page: parsedData.page,
     limit,
   };
 };
@@ -217,35 +246,23 @@ export const getAllApplications = async ({
     ...headers(accessToken),
   });
 
-  const body = res.data;
-  const rawData =
-    res.data?.data?.data ||
-    res.data?.data ||
-    res.data?.applications ||
-    res.data ||
-    [];
-  const applications = Array.isArray(rawData)
-    ? rawData
-    : rawData.applications || [];
+  const parsedData = parseEnvelope(
+    paginatedApplicationsSchema,
+    res,
+    "getAllApplications",
+  );
 
   const normalizedData = await enrichApplicationsWithJobs(
-    applications,
+    parsedData.data,
     accessToken,
   );
-  const paginationMeta = getPaginationMeta({
-    body,
-    rawData,
-    itemsLength: normalizedData.length,
-    page,
-    limit,
-  });
 
   return {
     items: normalizedData,
     data: normalizedData,
-    total: paginationMeta.total,
-    totalPages: paginationMeta.totalPages,
-    page,
+    total: parsedData.total,
+    totalPages: parsedData.totalPages,
+    page: parsedData.page,
     limit,
   };
 };
@@ -255,8 +272,8 @@ export const getApplicationById = async ({ id, accessToken }) => {
     `/applications/${id}`,
     headers(accessToken),
   );
-  const data = res.data?.data || res.data?.application || res.data;
-  return normalizeApplication(Array.isArray(data) ? data[0] : data);
+  const data = parseEnvelope(applicationSchema, res, "getApplicationById");
+  return normalizeApplication(data);
 };
 
 export const updateApplicationStatus = async ({
@@ -286,7 +303,9 @@ export const triggerAIReview = async ({ id, accessToken }) => {
     {},
     headers(accessToken),
   );
-  return normalizeApplication(res.data?.data || res.data);
+  return normalizeApplication(
+    parseEnvelope(applicationSchema, res, "triggerAIReview"),
+  );
 };
 
 export const submitInterviewAnswers = async ({ id, answers, accessToken }) => {
@@ -295,7 +314,9 @@ export const submitInterviewAnswers = async ({ id, answers, accessToken }) => {
     { answers },
     headers(accessToken),
   );
-  return normalizeApplication(res.data?.data || res.data);
+  return normalizeApplication(
+    parseEnvelope(applicationSchema, res, "submitInterviewAnswers"),
+  );
 };
 
 export const updateApplicationPersonalInfo = async ({
@@ -308,7 +329,9 @@ export const updateApplicationPersonalInfo = async ({
     { personalInfo },
     headers(accessToken),
   );
-  return normalizeApplication(res.data?.data || res.data);
+  return normalizeApplication(
+    parseEnvelope(applicationSchema, res, "updateApplicationPersonalInfo"),
+  );
 };
 
 export const getApplicationsOverview = async (accessToken, params = {}) => {

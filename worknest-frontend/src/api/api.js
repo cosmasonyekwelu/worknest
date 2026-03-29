@@ -8,8 +8,12 @@ export const loginUser = async (formData) => {
   return await axiosInstance.post("/auth/login", formData);
 };
 
-export const googleLoginUser = async (googleJWT) => {
-  return await axiosInstance.post("/auth/google", { googleJWT });
+export const googleLoginUser = async (payload) => {
+  if (typeof payload === "string") {
+    return await axiosInstance.post("/auth/google", { googleJWT: payload });
+  }
+
+  return await axiosInstance.post("/auth/google", payload);
 };
 
 export const getAuthenticatedUser = async (accessToken) => {
@@ -71,7 +75,7 @@ export const resetPassword = async ({
 
 export const createJob = async (jobData, accessToken) => {
   return await axiosInstance.post(
-    "/jobs/create",
+    "/jobs",
     jobData,
     headers(accessToken),
   );
@@ -79,7 +83,7 @@ export const createJob = async (jobData, accessToken) => {
 
 export const updateJob = async (id, jobData, accessToken) => {
   return await axiosInstance.patch(
-    `/jobs/${id}/update`,
+    `/jobs/${id}`,
     jobData,
     headers(accessToken),
   );
@@ -97,7 +101,7 @@ export const uploadJobAvatar = async ({ jobId, file, accessToken }) => {
 };
 
 export const deleteJob = async (id, accessToken) => {
-  return await axiosInstance.delete(`/jobs/${id}/delete`, headers(accessToken));
+  return await axiosInstance.delete(`/jobs/${id}`, headers(accessToken));
 };
 
 export const getAllJobs = async (params = {}, accessToken) => {

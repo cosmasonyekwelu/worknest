@@ -7,6 +7,10 @@ const buildKey = (req) => {
 };
 
 const defaultHandlerMessage = "Too many requests, please try again later";
+const normalizeEmailKey = (email) =>
+  String(email || "")
+    .trim()
+    .toLowerCase();
 
 // General rate limit for authentication endpoints
 export const rateLimiter = rateLimit({
@@ -26,6 +30,19 @@ export const refreshTokenLimit = rateLimit({
   standardHeaders: true,
   keyGenerator: buildKey,
   legacyHeaders: false,
+});
+
+export const forgotPasswordLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message:
+    "Too many password reset attempts for this email address. Please wait and try again.",
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => {
+    const emailKey = normalizeEmailKey(req.body?.email) || "unknown-email";
+    return `${ipKeyGenerator(req.ip)}-${emailKey}`;
+  },
 });
 
 // Rate limit for high-write application endpoint

@@ -35,7 +35,7 @@ export default function Signup({ toggle }) {
     onSuccess: (response) => {
       toast.success(response?.data?.data?.message || "Registration successful");
       const token = response?.data?.data?.accessToken;
-      setAccessToken(token);
+      setAccessToken(token, "user");
       // Explicitly navigate to verify to ensure the user knows what to do next
       navigate("/auth/verify", { replace: true });
     },

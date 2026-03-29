@@ -14,6 +14,7 @@ const envSchema = z.object({
   JWT_ACCESS_TOKEN_EXPIRES: z.string().default("15m"),
   JWT_REFRESH_TOKEN_EXPIRES: z.string().default("7d"),
   MONITORING_TOKEN: z.string().min(16).optional(),
+  GOOGLE_CLIENT_ID: z.string().min(1).optional(),
   BREVO_API_KEY: z.string().min(1),
   BREVO_SENDER_EMAIL: z.string().email(),
   BREVO_SENDER_NAME: z.string().min(1),

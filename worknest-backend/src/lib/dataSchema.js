@@ -45,6 +45,13 @@ export const validateSignInSchema = z.object({
     }),
 });
 
+export const googleAuthSchema = z.object({
+  googleJWT: z.string().trim().min(1, {
+    message: "Google credential is required",
+  }),
+  nonce: z.string().trim().min(1).optional(),
+});
+
 export const validateAccountSchema = z.object({
   verificationToken: z
     .string()

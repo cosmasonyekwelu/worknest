@@ -75,3 +75,21 @@ export const authorizedRoles = (...roles) => {
     return next();
   };
 };
+
+export const requireVerifiedUser = (req, res, next) => {
+  if (!req.user) {
+    return next(new UnauthorizedError("Authentication required"));
+  }
+
+  if (req.user.role === "admin") {
+    return next();
+  }
+
+  if (!req.user.isVerified) {
+    return next(
+      new ForbiddenError("Please verify your email to perform this action."),
+    );
+  }
+
+  return next();
+};

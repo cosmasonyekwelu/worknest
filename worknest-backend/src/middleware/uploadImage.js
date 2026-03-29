@@ -1,4 +1,6 @@
 import multer from "multer";
+import { fileTypeFromBuffer } from "file-type";
+import { BadRequestError } from "../lib/errors.js";
 
 const storage = multer.memoryStorage();
 
@@ -15,5 +17,31 @@ const uploadImage = multer({
   fileFilter: imageFilter,
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
 });
+
+const allowedImageTypes = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+  "image/gif",
+]);
+
+export const validateUploadedImage = async (req, res, next) => {
+  if (!req.file) {
+    return next();
+  }
+
+  const detectedType = await fileTypeFromBuffer(req.file.buffer);
+
+  if (!detectedType?.mime || !allowedImageTypes.has(detectedType.mime)) {
+    return next(
+      new BadRequestError(
+        "Invalid file type. Only PNG, JPEG, WEBP, and GIF images are allowed.",
+      ),
+    );
+  }
+
+  req.file.mimetype = detectedType.mime;
+  return next();
+};
 
 export default uploadImage;

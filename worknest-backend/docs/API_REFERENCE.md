@@ -18,6 +18,9 @@ Register a new user.
 ### `POST /auth/login`
 Login for applicant users.
 
+### `POST /auth/google`
+Exchange a Google ID token for a WorkNest access token and refresh cookie.
+
 ### `GET /auth/user`
 Get authenticated user profile.
 
@@ -37,7 +40,7 @@ Start forgot-password flow.
 Reset password with reset token flow payload.
 
 ### `POST /auth/logout`
-Logout authenticated user.
+Logout the current user and clear the refresh cookie. A valid refresh cookie is enough even if the access token has expired.
 
 ---
 
@@ -48,22 +51,22 @@ Logout authenticated user.
 Get authenticated user settings and profile data.
 
 ### `PATCH /users/me/settings/personal-info`
-Update personal profile fields for authenticated user.
+Update personal profile fields for an authenticated, verified applicant.
 
 ### `PATCH /users/me/settings/notifications`
-Update notification preferences (`email`, `push`, `marketing`).
+Update notification preferences (`email`, `push`, `marketing`) for a verified applicant.
 
 ### `PATCH /users/me/settings/profile-privacy`
-Update privacy preferences (`profileVisibility`, `showEmail`, `showPhone`).
+Update privacy preferences (`profileVisibility`, `showEmail`, `showPhone`) for a verified applicant.
 
 ### `PATCH /users/me/settings/password`
-Update password for authenticated user.
+Update password for an authenticated, verified applicant.
 
 ### `PATCH /users/me/settings/avatar`
-Upload user avatar (`multipart/form-data`, field: `avatar`).
+Upload user avatar (`multipart/form-data`, field: `avatar`) for a verified applicant. Image signatures are validated server-side.
 
 ### `DELETE /users/me/settings/account`
-Delete authenticated user account.
+Delete the authenticated, verified applicant account.
 
 ---
 
@@ -97,13 +100,13 @@ Delete a user account by ID (admin only).
 Delete current admin profile account.
 
 ### `POST /admin/logout`
-Logout authenticated admin.
+Logout the current admin and clear the refresh cookie. A valid refresh cookie is enough even if the access token has expired.
 
 ---
 
 ## Job Routes (`/jobs`)
 
-### `POST /jobs/create`
+### `POST /jobs`
 Create a job (admin only, supports avatar upload).
 
 ### `GET /jobs/all`
@@ -112,33 +115,35 @@ Get all jobs (supports optional authentication).
 ### `GET /jobs/:id`
 Get job details by ID.
 
-### `PATCH /jobs/:id/update`
+### `PATCH /jobs/:id`
 Update job by ID (admin only).
 
-### `DELETE /jobs/:id/delete`
+### `DELETE /jobs/:id`
 Delete job by ID (admin only).
 
 ### `PATCH /jobs/:jobId/upload-avatar`
-Upload or replace job avatar image.
+Upload or replace job avatar image. Image signatures are validated server-side.
 
 ### `GET /jobs/saved`
-List saved jobs for authenticated applicant.
+List saved jobs for an authenticated, verified applicant.
 
 ### `POST /jobs/:id/save`
-Save a job (applicant only).
+Save a job (verified applicant only).
 
 ### `DELETE /jobs/:id/save`
-Unsave a job (applicant only).
+Unsave a job (verified applicant only).
+
+Legacy aliases `POST /jobs/create`, `PATCH /jobs/:id/update`, and `DELETE /jobs/:id/delete` remain temporarily supported but are deprecated.
 
 ---
 
 ## Application Routes (`/applications`)
 
 ### `POST /applications/:jobId/apply`
-Apply for a job (`multipart/form-data`, field: `resume`, applicant only).
+Apply for a job (`multipart/form-data`, field: `resume`, verified applicant only). Resume files are validated by file signature.
 
 ### `GET /applications/me`
-Get current applicant's applications.
+Get current verified applicant's applications.
 
 ### `GET /applications/:id`
 Get application details by ID (applicant or admin).

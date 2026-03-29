@@ -5,12 +5,22 @@ import bcrypt from "bcryptjs";
 import { uploadToCloudinary, deleteFromCloudinary } from "../lib/cloudinary.js";
 import logger from "../config/logger.js";
 import { AppError, NotFoundError, ValidationError, ConflictError } from "../lib/errors.js";
+import Application from "../models/application.js";
 
 const userService = {
   forgotPassword: async (req) => {
-    const user = await User.findOne({ email: req.body.email });
+    const normalizedEmail = req.body.email?.toLowerCase().trim();
+    const user = await User.findOne({ email: normalizedEmail }).select(
+      "+passwordResetToken +passwordResetTokenExpiry",
+    );
     if (!user) {
-      throw new NotFoundError("Account not found");
+      logger.warn("Password reset requested for unknown email", {
+        email: normalizedEmail,
+        ip: req.ip,
+      });
+      return {
+        message: "If an account exists, a password reset link has been sent.",
+      };
     }
     // generate password reset token
     const resetCode = crypto.randomInt(100000, 999999).toString();
@@ -33,7 +43,9 @@ const userService = {
         });
       });
     });
-    return user;
+    return {
+      message: "If an account exists, a password reset link has been sent.",
+    };
   },
   resetPassword: async (userData) => {
     const { email, password, confirmPassword, passwordResetToken } = userData;
@@ -185,6 +197,13 @@ const userService = {
       }
     }
     const updatedUser = await user.save();
+    await Application.updateMany(
+      { applicant: userId },
+      {
+        applicantName: updatedUser.fullname,
+        applicantEmail: updatedUser.email,
+      },
+    );
     return updatedUser;
   },
   updateNotificationSettings: async (userId, settingsData) => {

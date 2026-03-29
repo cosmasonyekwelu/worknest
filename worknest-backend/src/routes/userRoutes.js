@@ -1,6 +1,7 @@
 import express from "express";
 import {
   authenticateUser,
+  googleLogin,
   login,
   logout,
   refreshAccessToken,
@@ -8,16 +9,21 @@ import {
   resendVerificationToken,
   verifyUserAccount,
 } from "../controllers/auth.controller.js";
-import { rateLimiter, refreshTokenLimit } from "../middleware/rateLimit.js";
+import {
+  forgotPasswordLimiter,
+  rateLimiter,
+  refreshTokenLimit,
+} from "../middleware/rateLimit.js";
 import { validateFormData } from "../middleware/validateForm.js";
 import {
   forgotPasswordSchema,
+  googleAuthSchema,
   validateAccountSchema,
   validateResetPasswordSchema,
   validateSignInSchema,
   validateSignUpSchema,
 } from "../lib/dataSchema.js";
-import { verifyAuth } from "../middleware/authenticate.js";
+import { optionalAuth, verifyAuth } from "../middleware/authenticate.js";
 import { cacheMiddleware, clearCache } from "../middleware/cache.js";
 import { forgotPassword, resetPassword } from "../controllers/user.controller.js";
 
@@ -34,6 +40,12 @@ router.post(
   rateLimiter,
   validateFormData(validateSignInSchema),
   login,
+);
+router.post(
+  "/google",
+  rateLimiter,
+  validateFormData(googleAuthSchema),
+  googleLogin,
 );
 router.get(
   "/user",
@@ -62,7 +74,7 @@ router.post(
 
 router.post(
   "/forgot-password",
-  rateLimiter,
+  forgotPasswordLimiter,
   validateFormData(forgotPasswordSchema),
   forgotPassword,
 );
@@ -74,6 +86,6 @@ router.patch(
   resetPassword,
 );
 
-router.post("/logout", verifyAuth, clearCache("auth_user"), logout);
+router.post("/logout", optionalAuth, clearCache("auth_user"), logout);
 
 export default router;

@@ -35,6 +35,27 @@ const applicationSchema = new Schema(
       phone: String,
       currentLocation: String, // field name without space
     },
+    applicantName: {
+      type: String,
+      trim: true,
+      index: true,
+    },
+    applicantEmail: {
+      type: String,
+      trim: true,
+      lowercase: true,
+      index: true,
+    },
+    jobTitle: {
+      type: String,
+      trim: true,
+      index: true,
+    },
+    companyName: {
+      type: String,
+      trim: true,
+      index: true,
+    },
 
     ai_score: {
       type: Number,
@@ -102,6 +123,12 @@ applicationSchema.index({ applicant: 1, job: 1 }, { unique: true });
 applicationSchema.index({ applicant: 1, createdAt: -1 });
 applicationSchema.index({ job: 1, status: 1, createdAt: -1 });
 applicationSchema.index({ status: 1, createdAt: -1 });
+applicationSchema.index({
+  applicantName: "text",
+  applicantEmail: "text",
+  jobTitle: "text",
+  companyName: "text",
+});
 
 // Index for sorting by newest
 applicationSchema.index({ createdAt: -1 });

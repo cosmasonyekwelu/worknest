@@ -153,7 +153,7 @@ const userSchema = new Schema(
   },
 );
 
-userSchema.index({ fullname: "text", role: "text", email: "text" });
+userSchema.index({ fullname: "text", email: "text" });
 userSchema.index({ role: 1 });
 userSchema.index({ createdAt: -1 });
 

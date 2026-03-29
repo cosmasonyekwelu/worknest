@@ -132,6 +132,6 @@ export const deleteProfileAccount = tryCatchFn(async (req, res) => {
 });
 
 export const logoutAdmin = tryCatchFn(async (req, res) => {
-  const responseData = await adminService.logoutAdmin(req, res, req.user._id);
+  const responseData = await adminService.logoutAdmin(req, res, req.user?._id);
   return successResponse(res, responseData, "Logged out successfully", 200);
 });

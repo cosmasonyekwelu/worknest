@@ -152,11 +152,9 @@ const router = createBrowserRouter([
           {
             path: "jobs/:id",
             element: (
-              <PrivateRouteGate>
-                <Suspense fallback={<SuspenseUi />}>
-                  <JobDetails />
-                </Suspense>
-              </PrivateRouteGate>
+              <Suspense fallback={<SuspenseUi />}>
+                <JobDetails />
+              </Suspense>
             ),
           },
           {
