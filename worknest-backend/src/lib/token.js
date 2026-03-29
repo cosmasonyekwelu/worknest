@@ -1,9 +1,6 @@
 import jwt from "jsonwebtoken";
-import dotenv from "dotenv";
 import crypto from "crypto";
 import { getJwtSecrets } from "../config/env.js";
-
-dotenv.config();
 
 export const USER_REFRESH_COOKIE_NAME = "userRefreshToken";
 export const ADMIN_REFRESH_COOKIE_NAME = "adminRefreshToken";

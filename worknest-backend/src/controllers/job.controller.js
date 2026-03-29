@@ -15,13 +15,6 @@ import { buildValidationError } from "../lib/validation.js";
 import { withMongoTransaction } from "../lib/transaction.js";
 
 const { successResponse } = responseHandler;
-const logLegacyCompanyLogoWarning = () => {
-  if (process.env.NODE_ENV !== "production") {
-    console.warn(
-      "Jobs API is returning legacy field `avatar` alongside `companyLogo`. Frontend should migrate to `companyLogo`.",
-    );
-  }
-};
 
 const serializeJob = (job) => {
   if (!job) {
@@ -63,7 +56,6 @@ export const uploadJobAvatarController = tryCatchFn(async (req, res) => {
 
   const updatedJob = await uploadJobAvatar(jobId, avatarPayload);
 
-  logLegacyCompanyLogoWarning();
   return successResponse(
     res,
     serializeJob(updatedJob),
@@ -99,7 +91,6 @@ const createJobs = tryCatchFn(async (req, res) => {
   }
 
   const job = await Jobs.create({ ...payload, avatar: avatarUrl, avatarId });
-  logLegacyCompanyLogoWarning();
   return successResponse(res, serializeJob(job), "Job created successfully", 201);
 });
 
@@ -112,7 +103,6 @@ const getJobs = tryCatchFn(async (req, res) => {
   };
 
   const data = await searchJobService(filters);
-  logLegacyCompanyLogoWarning();
 
   return successResponse(
     res,
@@ -148,7 +138,6 @@ const getJobById = tryCatchFn(async (req, res) => {
     req.user?.savedJobs?.some((savedId) => savedId.toString() === id.toString())
   );
 
-  logLegacyCompanyLogoWarning();
   return successResponse(
     res,
     { ...serializeJob(job), saved },
@@ -242,7 +231,6 @@ const updateJob = tryCatchFn(async (req, res) => {
       });
     }
 
-    logLegacyCompanyLogoWarning();
     return successResponse(res, serializeJob(job), "Job updated successfully", 200);
   } catch (error) {
     if (!transactionCommitted && uploadedAvatar?.public_id) {
@@ -367,7 +355,6 @@ const getSavedJobs = tryCatchFn(async (req, res) => {
     options: { skip, limit, sort: { createdAt: -1 } },
   });
 
-  logLegacyCompanyLogoWarning();
   return successResponse(res, {
       jobs: serializeJobCollection(user.savedJobs),
       total,

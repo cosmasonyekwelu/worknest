@@ -1,13 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { AuthContext } from ".";
 import { getAuthenticatedUser, refreshAccessToken } from "@/api/api";
-import { useQuery } from "@tanstack/react-query";
-import SuspenseUi from "@/components/SuspenseUi";
 import { getAuthenticatedAdmin, refreshAdminAccessToken } from "@/api/admin";
+import SuspenseUi from "@/components/SuspenseUi";
 import axiosInstance from "@/utils/axiosInstance";
 
-let isRefreshing = false;
-let failedQueue = [];
 const AUTH_MODE_STORAGE_KEY = "worknest-auth-mode";
 const VALID_AUTH_MODES = ["user", "admin"];
 
@@ -26,53 +25,40 @@ const getStoredAuthMode = () => {
   return VALID_AUTH_MODES.includes(storedMode) ? storedMode : null;
 };
 
-const isAdminPath = () => {
-  if (typeof window === "undefined") {
-    return false;
+const isAdminPath = (pathname = "") =>
+  pathname.startsWith("/admin") || pathname.startsWith("/auth/admin");
+
+const normalizeAuthMode = (value) =>
+  VALID_AUTH_MODES.includes(value) ? value : "user";
+
+const buildRefreshQueues = () => ({
+  user: { isRefreshing: false, queue: [] },
+  admin: { isRefreshing: false, queue: [] },
+});
+
+const resolveRefreshMode = ({ pathname = "/", requestUrl = "" }) => {
+  if (isAdminPath(pathname)) {
+    return "admin";
   }
 
-  const pathname = window.location?.pathname || "";
-  return pathname.startsWith("/admin") || pathname.startsWith("/auth/admin");
-};
-
-const getRefreshModesToTry = (preferredMode) => {
-  if (preferredMode && VALID_AUTH_MODES.includes(preferredMode)) {
-    return [
-      preferredMode,
-      ...VALID_AUTH_MODES.filter((mode) => mode !== preferredMode),
-    ];
-  }
-
-  if (typeof window !== "undefined") {
-    const pathname = window.location?.pathname || "";
-    if (pathname.startsWith("/admin") || pathname.startsWith("/auth/admin")) {
-      return ["admin", "user"];
-    }
-  }
-
-  return ["user", "admin"];
-};
-
-const processQueue = (error, token = null) => {
-  failedQueue.forEach((prom) => {
-    if (error) {
-      prom.reject(error);
-    } else {
-      prom.resolve(token);
-    }
-  });
-  failedQueue = [];
+  return typeof requestUrl === "string" && requestUrl.includes("/admin/")
+    ? "admin"
+    : "user";
 };
 
 export const AuthProvider = ({ children }) => {
+  const location = useLocation();
+  const pathname = location.pathname || "/";
+  const routeRequiresAdminAuth = isAdminPath(pathname);
   const [user, setUser] = useState(null);
   const [hasLoggedOut, setHasLoggedOut] = useState(false);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [authMode, setAuthModeState] = useState(() =>
-    isAdminPath() ? getStoredAuthMode() : null,
+    routeRequiresAdminAuth ? getStoredAuthMode() : null,
   );
   const [accessToken, setAccessTokenState] = useState(null);
-  const hasPersistedAdminMode = useRef(authMode === "admin");
+  const hasPersistedAdminMode = useRef(getStoredAuthMode() === "admin");
+  const refreshQueuesRef = useRef(buildRefreshQueues());
   const authClients = useMemo(
     () => ({
       user: {
@@ -88,16 +74,39 @@ export const AuthProvider = ({ children }) => {
     }),
     [],
   );
+  const profileMode = routeRequiresAdminAuth
+    ? "admin"
+    : authMode === "admin"
+      ? "admin"
+      : "user";
+  const refreshMode = resolveRefreshMode({ pathname });
+
+  const processQueue = useCallback((mode, error, token = null) => {
+    const refreshState = refreshQueuesRef.current[normalizeAuthMode(mode)];
+
+    refreshState.queue.forEach((pendingRequest) => {
+      if (error) {
+        pendingRequest.reject(error);
+      } else {
+        pendingRequest.resolve(token);
+      }
+    });
+
+    refreshState.queue = [];
+  }, []);
 
   const setAuthMode = useCallback((nextAuthMode) => {
-    setAuthModeState(nextAuthMode);
+    const normalizedMode =
+      nextAuthMode === null ? null : normalizeAuthMode(nextAuthMode);
+
+    setAuthModeState(normalizedMode);
 
     if (typeof window === "undefined") {
       return;
     }
 
-    if (nextAuthMode === "admin") {
-      window.sessionStorage.setItem(AUTH_MODE_STORAGE_KEY, nextAuthMode);
+    if (normalizedMode === "admin") {
+      window.sessionStorage.setItem(AUTH_MODE_STORAGE_KEY, normalizedMode);
       hasPersistedAdminMode.current = true;
       return;
     }
@@ -108,21 +117,42 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
-  const setAccessToken = useCallback((token, nextAuthMode) => {
-    setAccessTokenState(token);
-    if (nextAuthMode !== undefined) {
-      setAuthMode(nextAuthMode);
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
     }
-    if (token) {
-      setHasLoggedOut(false);
-    }
-  }, [setAuthMode]);
 
-  const login = useCallback((userData, mode = "user") => {
-    setHasLoggedOut(false);
-    setUser(userData);
-    setAuthMode(mode);
-  }, [setAuthMode]);
+    if (routeRequiresAdminAuth || authMode === "admin") {
+      return;
+    }
+
+    if (getStoredAuthMode() === "admin") {
+      window.sessionStorage.removeItem(AUTH_MODE_STORAGE_KEY);
+      hasPersistedAdminMode.current = false;
+    }
+  }, [authMode, routeRequiresAdminAuth]);
+
+  const setAccessToken = useCallback(
+    (token, nextAuthMode) => {
+      setAccessTokenState(token);
+      if (nextAuthMode !== undefined) {
+        setAuthMode(nextAuthMode);
+      }
+      if (token) {
+        setHasLoggedOut(false);
+      }
+    },
+    [setAuthMode],
+  );
+
+  const login = useCallback(
+    (userData, mode = "user") => {
+      setHasLoggedOut(false);
+      setUser(userData);
+      setAuthMode(mode);
+    },
+    [setAuthMode],
+  );
 
   const logout = useCallback(() => {
     setHasLoggedOut(true);
@@ -143,43 +173,35 @@ export const AuthProvider = ({ children }) => {
   }, [accessToken]);
 
   const refreshCurrentSession = useCallback(
-    async (preferredMode = authMode) => {
-      const modesToTry = getRefreshModesToTry(preferredMode);
-      let lastError = null;
+    async (requestedMode = refreshMode) => {
+      const mode = normalizeAuthMode(requestedMode);
+      const refreshConfig = authClients[mode];
 
-      for (const mode of modesToTry) {
-        const refreshConfig = authClients[mode];
+      try {
+        logAuthDebug("Refreshing session", { mode, pathname });
+        const res = await refreshConfig.refresh();
+        const newToken = res?.data?.data?.accessToken;
 
-        try {
-          logAuthDebug("Refreshing session", { mode });
-          const res = await refreshConfig.refresh();
-          const newToken = res?.data?.data?.accessToken;
-
-          if (!newToken) {
-            throw new Error("No access token returned");
-          }
-
-          setAccessToken(newToken, mode);
-          logAuthDebug("Session refresh completed", {
-            mode,
-            status: res?.status,
-          });
-          return { accessToken: newToken, authMode: mode };
-        } catch (error) {
-          if (!lastError) {
-            lastError = error;
-          }
-          logAuthDebug("Session refresh failed", {
-            mode,
-            status: error?.response?.status,
-            message: error?.response?.data?.message || error?.message,
-          });
+        if (!newToken) {
+          throw new Error("No access token returned");
         }
-      }
 
-      throw lastError || new Error("Refresh failed");
+        setAccessToken(newToken, mode);
+        logAuthDebug("Session refresh completed", {
+          mode,
+          status: res?.status,
+        });
+        return { accessToken: newToken, authMode: mode };
+      } catch (error) {
+        logAuthDebug("Session refresh failed", {
+          mode,
+          status: error?.response?.status,
+          message: error?.response?.data?.message || error?.message,
+        });
+        throw error;
+      }
     },
-    [authClients, authMode, setAccessToken],
+    [authClients, pathname, refreshMode, setAccessToken],
   );
 
   useEffect(() => {
@@ -199,25 +221,32 @@ export const AuthProvider = ({ children }) => {
         }
 
         originalRequest._retry = true;
+        const requestAuthMode = resolveRefreshMode({
+          pathname,
+          requestUrl: originalRequest.url,
+        });
+        const refreshState = refreshQueuesRef.current[requestAuthMode];
 
-        if (isRefreshing) {
+        if (refreshState.isRefreshing) {
           return new Promise((resolve, reject) => {
-            failedQueue.push({ resolve, reject });
-          }).then((token) => {
-            originalRequest.headers = {
-              ...(originalRequest.headers || {}),
-              Authorization: `Bearer ${token}`,
-            };
-            return axiosInstance(originalRequest);
-          }).catch((err) => Promise.reject(err));
+            refreshState.queue.push({ resolve, reject });
+          })
+            .then((token) => {
+              originalRequest.headers = {
+                ...(originalRequest.headers || {}),
+                Authorization: `Bearer ${token}`,
+              };
+              return axiosInstance(originalRequest);
+            })
+            .catch((requestError) => Promise.reject(requestError));
         }
 
-        isRefreshing = true;
+        refreshState.isRefreshing = true;
 
         try {
           const { accessToken: newToken, authMode: resolvedMode } =
-            await refreshCurrentSession(authMode);
-          processQueue(null, newToken);
+            await refreshCurrentSession(requestAuthMode);
+          processQueue(requestAuthMode, null, newToken);
           originalRequest.headers = {
             ...(originalRequest.headers || {}),
             Authorization: `Bearer ${newToken}`,
@@ -229,11 +258,11 @@ export const AuthProvider = ({ children }) => {
 
           return axiosInstance(originalRequest);
         } catch (refreshError) {
-          processQueue(refreshError, null);
+          processQueue(requestAuthMode, refreshError, null);
           logout();
           return Promise.reject(refreshError);
         } finally {
-          isRefreshing = false;
+          refreshState.isRefreshing = false;
         }
       },
     );
@@ -241,11 +270,11 @@ export const AuthProvider = ({ children }) => {
     return () => {
       axiosInstance.interceptors.response.eject(responseInterceptor);
     };
-  }, [authMode, logout, refreshCurrentSession, setAuthMode]);
+  }, [logout, pathname, processQueue, refreshCurrentSession, setAuthMode]);
 
   const refreshSessionQuery = useQuery({
-    queryKey: ["refresh_token", authMode],
-    queryFn: () => refreshCurrentSession(authMode),
+    queryKey: ["refresh_token", refreshMode],
+    queryFn: () => refreshCurrentSession(refreshMode),
     enabled: !accessToken && !hasLoggedOut,
     retry: false,
     refetchOnWindowFocus: false,
@@ -260,13 +289,12 @@ export const AuthProvider = ({ children }) => {
     refreshSessionQuery.isError;
 
   useQuery({
-    queryKey: [authMode ? authClients[authMode].profileKey : "auth_user", accessToken, authMode],
+    queryKey: [authClients[profileMode].profileKey, accessToken, profileMode],
     queryFn: async () => {
       setIsAuthenticating(true);
       try {
-        const authClient = authMode ? authClients[authMode] : authClients.user;
-        const authRequest = authClient.authenticate(accessToken);
-        const res = await authRequest;
+        const authClient = authClients[profileMode];
+        const res = await authClient.authenticate(accessToken);
 
         if (res.status === 200) {
           setUser(res.data.data);
@@ -279,7 +307,7 @@ export const AuthProvider = ({ children }) => {
           setAccessToken(null, null);
         }
         logAuthDebug("Authenticated profile lookup failed", {
-          mode: authMode || "user",
+          mode: profileMode,
           status: err?.response?.status,
           message: err?.response?.data?.message || err?.message,
         });
@@ -292,13 +320,9 @@ export const AuthProvider = ({ children }) => {
     retry: false,
     refetchOnWindowFocus: false,
     refetchOnReconnect: true,
-    // refetchInterval: 60000,
-    // refetchIntervalInBackground: true,
   });
 
-  const authBusy =
-    isAuthenticating ||
-    (!authReady && !hasLoggedOut);
+  const authBusy = isAuthenticating || (!authReady && !hasLoggedOut);
 
   if (authBusy) {
     return <SuspenseUi />;

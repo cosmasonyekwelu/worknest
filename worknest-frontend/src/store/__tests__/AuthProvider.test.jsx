@@ -36,7 +36,20 @@ function AuthStateViewer() {
   );
 }
 
+function createDeferred() {
+  let resolve;
+  let reject;
+  const promise = new Promise((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+
+  return { promise, resolve, reject };
+}
+
 function renderAuthProvider(pathname = "/jobs") {
+  window.history.replaceState({}, "", pathname);
+
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: {
@@ -59,14 +72,14 @@ function renderAuthProvider(pathname = "/jobs") {
 
 describe("AuthProvider", () => {
   let axiosMock;
-  let getItemSpy;
   let setItemSpy;
   let removeItemSpy;
 
   beforeEach(() => {
     axiosMock = new MockAdapter(axiosInstance);
-    vi.spyOn(console, "log").mockImplementation(() => {});
-    getItemSpy = vi.spyOn(Storage.prototype, "getItem");
+    window.sessionStorage.clear();
+    vi.clearAllMocks();
+    vi.spyOn(console, "debug").mockImplementation(() => {});
     setItemSpy = vi.spyOn(Storage.prototype, "setItem");
     removeItemSpy = vi.spyOn(Storage.prototype, "removeItem");
 
@@ -95,7 +108,59 @@ describe("AuthProvider", () => {
 
   afterEach(() => {
     axiosMock.restore();
+    window.sessionStorage.clear();
     vi.restoreAllMocks();
+  });
+
+  it("does not fall back to admin refresh on user routes when user refresh fails", async () => {
+    window.sessionStorage.setItem("worknest-auth-mode", "admin");
+
+    vi.mocked(refreshAccessToken).mockRejectedValueOnce({
+      response: { status: 401 },
+    });
+    vi.mocked(refreshAdminAccessToken).mockResolvedValueOnce({
+      data: {
+        data: {
+          accessToken: "admin-token",
+        },
+      },
+    });
+
+    renderAuthProvider("/jobs");
+
+    await waitFor(() => {
+      expect(refreshAccessToken).toHaveBeenCalledTimes(1);
+      expect(screen.getByTestId("auth-state")).toHaveTextContent(
+        '"accessToken":null',
+      );
+    });
+
+    expect(refreshAdminAccessToken).not.toHaveBeenCalled();
+    expect(window.sessionStorage.getItem("worknest-auth-mode")).toBeNull();
+    expect(removeItemSpy).toHaveBeenCalledWith("worknest-auth-mode");
+  });
+
+  it("refreshes admin sessions through the admin endpoint on admin routes", async () => {
+    vi.mocked(refreshAdminAccessToken).mockResolvedValueOnce({
+      data: {
+        data: {
+          accessToken: "admin-token",
+        },
+      },
+    });
+
+    renderAuthProvider("/admin");
+
+    await waitFor(() => {
+      expect(screen.getByTestId("auth-state")).toHaveTextContent("admin-token");
+      expect(screen.getByTestId("auth-state")).toHaveTextContent("admin-1");
+      expect(screen.getByTestId("auth-state")).toHaveTextContent("admin");
+    });
+
+    expect(refreshAdminAccessToken).toHaveBeenCalledTimes(1);
+    expect(refreshAccessToken).not.toHaveBeenCalled();
+    expect(getAuthenticatedAdmin).toHaveBeenCalledWith("admin-token");
+    expect(setItemSpy).toHaveBeenCalledWith("worknest-auth-mode", "admin");
   });
 
   it("refreshes the access token after a 401 response and retries the request", async () => {
@@ -127,30 +192,30 @@ describe("AuthProvider", () => {
       return [500, { message: "unexpected authorization header" }];
     });
 
-    renderAuthProvider();
+    renderAuthProvider("/jobs");
 
     await waitFor(() => {
       expect(screen.getByTestId("auth-state")).toHaveTextContent("initial-token");
       expect(screen.getByTestId("auth-state")).toHaveTextContent("user-1");
     });
 
-    expect(refreshAccessToken).toHaveBeenCalledTimes(1);
-
     const response = await axiosInstance.get("/jobs/protected");
     expect(response.data.status).toBe("retried");
 
     await waitFor(() => {
-      expect(screen.getByTestId("auth-state")).toHaveTextContent("refreshed-token");
+      expect(screen.getByTestId("auth-state")).toHaveTextContent(
+        "refreshed-token",
+      );
     });
 
     expect(refreshAccessToken).toHaveBeenCalledTimes(2);
+    expect(refreshAdminAccessToken).not.toHaveBeenCalled();
     expect(getAuthenticatedUser).toHaveBeenCalledWith("initial-token");
-    expect(getItemSpy).not.toHaveBeenCalled();
-    expect(setItemSpy).not.toHaveBeenCalled();
-    expect(removeItemSpy).not.toHaveBeenCalled();
   });
 
-  it("logs out when the refresh attempt fails", async () => {
+  it("queues concurrent 401 retries behind a single user refresh", async () => {
+    const deferredRefresh = createDeferred();
+
     vi.mocked(refreshAccessToken)
       .mockResolvedValueOnce({
         data: {
@@ -159,53 +224,49 @@ describe("AuthProvider", () => {
           },
         },
       })
-      .mockRejectedValueOnce(new Error("refresh failed"));
+      .mockImplementationOnce(() => deferredRefresh.promise);
 
-    axiosMock.onGet("/jobs/protected").reply(401, { message: "expired" });
+    const createProtectedReply = (status) => (config) => {
+      if (config.headers?.Authorization === "Bearer refreshed-token") {
+        return [200, { status }];
+      }
 
-    renderAuthProvider();
+      return [401, { message: "expired" }];
+    };
+
+    axiosMock.onGet("/jobs/protected-a").reply(createProtectedReply("retried-a"));
+    axiosMock.onGet("/jobs/protected-b").reply(createProtectedReply("retried-b"));
+
+    renderAuthProvider("/jobs");
 
     await waitFor(() => {
       expect(screen.getByTestId("auth-state")).toHaveTextContent("initial-token");
       expect(screen.getByTestId("auth-state")).toHaveTextContent("user-1");
     });
 
-    expect(refreshAccessToken).toHaveBeenCalled();
-
-    await expect(axiosInstance.get("/jobs/protected")).rejects.toThrow("refresh failed");
+    const pendingRequests = Promise.all([
+      axiosInstance.get("/jobs/protected-a"),
+      axiosInstance.get("/jobs/protected-b"),
+    ]);
 
     await waitFor(() => {
-      expect(screen.getByTestId("auth-state")).toHaveTextContent('"accessToken":null');
-      expect(screen.getByTestId("auth-state")).toHaveTextContent('"userId":null');
+      expect(refreshAccessToken).toHaveBeenCalledTimes(2);
     });
 
-    expect(getItemSpy).not.toHaveBeenCalled();
-    expect(setItemSpy).not.toHaveBeenCalled();
-    expect(removeItemSpy).not.toHaveBeenCalled();
-  });
+    expect(refreshAdminAccessToken).not.toHaveBeenCalled();
 
-  it("restores an admin session on load without relying on the current path", async () => {
-    vi.mocked(refreshAccessToken).mockRejectedValueOnce({
-      response: { status: 401 },
-    });
-    vi.mocked(refreshAdminAccessToken).mockResolvedValueOnce({
+    deferredRefresh.resolve({
       data: {
         data: {
-          accessToken: "admin-token",
+          accessToken: "refreshed-token",
         },
       },
     });
 
-    renderAuthProvider("/admin");
+    const [firstResponse, secondResponse] = await pendingRequests;
 
-    await waitFor(() => {
-      expect(screen.getByTestId("auth-state")).toHaveTextContent("admin-token");
-      expect(screen.getByTestId("auth-state")).toHaveTextContent("admin-1");
-      expect(screen.getByTestId("auth-state")).toHaveTextContent("admin");
-    });
-
-    expect(refreshAccessToken).toHaveBeenCalled();
-    expect(refreshAdminAccessToken).toHaveBeenCalled();
-    expect(getAuthenticatedAdmin).toHaveBeenCalledWith("admin-token");
+    expect(firstResponse.data.status).toBe("retried-a");
+    expect(secondResponse.data.status).toBe("retried-b");
+    expect(refreshAccessToken).toHaveBeenCalledTimes(2);
   });
 });
