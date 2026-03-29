@@ -35,8 +35,21 @@ test('validateEnv throws when required value missing', () => {
   const backup = { ...process.env };
   Object.assign(process.env, baseEnv);
   delete process.env.CLIENT_URL;
+  delete process.env.ALLOWED_ORIGINS;
 
-  assert.throws(() => validateEnv());
+  assert.throws(() => validateEnv(), /CLIENT_URL or ALLOWED_ORIGINS/);
+  process.env = backup;
+});
+
+test('validateEnv succeeds when ALLOWED_ORIGINS is set without CLIENT_URL', () => {
+  const backup = { ...process.env };
+  Object.assign(process.env, baseEnv, {
+    ALLOWED_ORIGINS: 'https://worknest-silk.vercel.app,https://admin.worknest.com',
+  });
+  delete process.env.CLIENT_URL;
+
+  const result = validateEnv();
+  assert.equal(result.ALLOWED_ORIGINS, 'https://worknest-silk.vercel.app,https://admin.worknest.com');
   process.env = backup;
 });
 

@@ -1,6 +1,24 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildCorsOptions, enforceHttpsMiddleware } from '../src/middleware/security.js';
+import {
+  buildCorsOptions,
+  enforceHttpsMiddleware,
+  getAllowedOriginsFromEnv,
+  parseAllowedOrigins,
+} from '../src/middleware/security.js';
+
+test('parseAllowedOrigins merges comma-separated origin groups without duplicates', () => {
+  const origins = parseAllowedOrigins(
+    'http://localhost:5173, https://worknest-silk.vercel.app',
+    'https://worknest-silk.vercel.app,https://admin.worknest.com',
+  );
+
+  assert.deepEqual(origins, [
+    'http://localhost:5173',
+    'https://worknest-silk.vercel.app',
+    'https://admin.worknest.com',
+  ]);
+});
 
 test('buildCorsOptions allows configured origin', async () => {
   const options = buildCorsOptions(['https://worknest.app']);
@@ -23,6 +41,19 @@ test('buildCorsOptions blocks unknown origin', async () => {
       resolve();
     });
   });
+});
+
+test('getAllowedOriginsFromEnv combines CLIENT_URL and ALLOWED_ORIGINS', () => {
+  const origins = getAllowedOriginsFromEnv({
+    CLIENT_URL: 'http://localhost:5173',
+    ALLOWED_ORIGINS: 'https://worknest-silk.vercel.app,https://admin.worknest.com',
+  });
+
+  assert.deepEqual(origins, [
+    'http://localhost:5173',
+    'https://worknest-silk.vercel.app',
+    'https://admin.worknest.com',
+  ]);
 });
 
 test('enforceHttpsMiddleware bypasses check outside production', () => {

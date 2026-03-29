@@ -3,7 +3,8 @@ import { z } from "zod";
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   PORT: z.coerce.number().int().positive().default(5000),
-  CLIENT_URL: z.string().min(1),
+  CLIENT_URL: z.string().min(1).optional(),
+  ALLOWED_ORIGINS: z.string().min(1).optional(),
   MONGO_URI: z.string().min(1),
   DATABASE_NAME: z.string().min(1),
   JWT_ACCESS_SECRET_KEY: z.string().min(16).optional(),
@@ -38,6 +39,14 @@ export const validateEnv = () => {
   const values = parsed.data;
   const accessSecret = values.JWT_ACCESS_SECRET_KEY || values.JWT_ACCESS_SECRET || values.JWT_SECRET_KEY;
   const refreshSecret = values.JWT_REFRESH_SECRET_KEY || values.JWT_REFRESH_SECRET || values.JWT_SECRET_KEY;
+  const corsOrigins = [values.CLIENT_URL, values.ALLOWED_ORIGINS]
+    .filter(Boolean)
+    .join(",")
+    .trim();
+
+  if (!corsOrigins) {
+    throw new Error("Environment validation failed: define CLIENT_URL or ALLOWED_ORIGINS");
+  }
 
   if (values.NODE_ENV === "production") {
     if (!values.BREVO_SENDER_EMAIL || !values.BREVO_SENDER_NAME) {

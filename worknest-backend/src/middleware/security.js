@@ -1,10 +1,14 @@
 import { ForbiddenError } from "../lib/errors.js";
 
-const parseAllowedOrigins = (rawOrigins = "") =>
-  rawOrigins
-    .split(",")
-    .map((origin) => origin.trim())
-    .filter(Boolean);
+export const parseAllowedOrigins = (...rawOriginGroups) =>
+  Array.from(
+    new Set(
+      rawOriginGroups
+        .flatMap((rawOrigins) => String(rawOrigins || "").split(","))
+        .map((origin) => origin.trim())
+        .filter(Boolean),
+    ),
+  );
 
 const normalizeOrigin = (origin) => {
   try {
@@ -47,6 +51,9 @@ export const buildCorsOptions = (allowedOrigins = []) => {
   };
 };
 
+export const getAllowedOriginsFromEnv = (env = process.env) =>
+  parseAllowedOrigins(env.CLIENT_URL, env.ALLOWED_ORIGINS);
+
 export const enforceHttpsMiddleware = (req, res, next) => {
   if (process.env.NODE_ENV !== "production") {
     return next();
@@ -62,4 +69,4 @@ export const enforceHttpsMiddleware = (req, res, next) => {
   return next(new ForbiddenError("HTTPS is required"));
 };
 
-export const allowedOrigins = parseAllowedOrigins(process.env.CLIENT_URL || process.env.ALLOWED_ORIGINS || "");
+export const allowedOrigins = getAllowedOriginsFromEnv();

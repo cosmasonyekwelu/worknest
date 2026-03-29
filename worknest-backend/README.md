@@ -22,6 +22,7 @@ npm run dev
 NODE_ENV=development
 PORT=5000
 CLIENT_URL=http://localhost:5173,https://admin.worknest.com
+ALLOWED_ORIGINS=https://worknest-silk.vercel.app,https://admin.worknest.com
 
 MONGO_URI=mongodb+srv://<user>:<password>@cluster.mongodb.net
 DATABASE_NAME=worknest_server
@@ -48,7 +49,7 @@ AI_SHORTLIST_THRESHOLD=50
 
 ## Security/Operations Notes
 - In production, HTTP requests are rejected unless `x-forwarded-proto=https` or direct TLS is used.
-- CORS is allowlist-based from `CLIENT_URL`.
+- CORS is allowlist-based from the combined values of `CLIENT_URL` and `ALLOWED_ORIGINS`.
 - Refresh token endpoints accept the refresh token from the secure cookie only.
 - Applicant-only write flows require verified accounts at the API layer.
 - Metrics endpoints require an `x-monitoring-token` header that matches `MONITORING_TOKEN`.
