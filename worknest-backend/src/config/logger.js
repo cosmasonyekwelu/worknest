@@ -39,7 +39,9 @@ if (shouldWriteFileLogs) {
     );
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
-    console.warn(`File logging disabled: could not initialize log directory "${logsDir}": ${message}`);
+    process.stderr.write(
+      `File logging disabled: could not initialize log directory "${logsDir}": ${message}\n`,
+    );
   }
 }
 

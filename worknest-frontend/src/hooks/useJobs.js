@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getAllJobs } from "@/api/api";
 import { useAuth } from "@/store";
 import { ADMIN_PAGE_SIZE } from "@/constants/pagination";
+import { reportClientError, reportClientWarning } from "@/utils/clientLogger";
 
 const SALARY_LABEL_TO_RANGE = {
   "₦300k - ₦380k": { min: 300000, max: 380000 },
@@ -188,7 +189,9 @@ export function useJobs(filters = {}) {
         const items = extractPublicJobsItems(responseBody);
 
         if (!Array.isArray(items)) {
-          console.warn("Unexpected jobs response shape", responseBody);
+          reportClientWarning("jobs_response_shape_unexpected", {
+            responseBody,
+          });
           return {
             items: [],
             data: [],
@@ -220,7 +223,9 @@ export function useJobs(filters = {}) {
           limit: normalizedLimit,
         };
       } catch (error) {
-        console.error("Failed to fetch jobs:", error);
+        reportClientError("jobs_fetch_failed", error, {
+          filters: queryParams,
+        });
         throw error;
       }
     },
@@ -316,7 +321,11 @@ export function useAdminJobs(params = {}) {
           limit: normalizedLimit,
         };
       } catch (error) {
-        console.error("Failed to fetch admin jobs:", error);
+        reportClientError("admin_jobs_fetch_failed", error, {
+          page,
+          status,
+          search,
+        });
         throw error;
       }
     },

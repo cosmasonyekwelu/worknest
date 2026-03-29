@@ -1,4 +1,7 @@
-import axiosInstance, { refreshClient } from "@/utils/axiosInstance";
+import axiosInstance, {
+  buildCsrfHeaders,
+  refreshClient,
+} from "@/utils/axiosInstance";
 import { headers } from "@/utils/constant";
 
 const serializeArrayParams = (params = {}) => {
@@ -44,6 +47,7 @@ export const getAuthenticatedUser = async (accessToken) => {
 export const refreshAccessToken = async () => {
   return await refreshClient.post("/auth/refresh-token", null, {
     withCredentials: true,
+    headers: buildCsrfHeaders(),
   });
 };
 
@@ -54,6 +58,10 @@ export const logoutUser = async (accessToken) => {
     {
       ...headers(accessToken),
       withCredentials: true,
+      headers: {
+        ...(headers(accessToken).headers || {}),
+        ...buildCsrfHeaders(),
+      },
     },
   );
 };

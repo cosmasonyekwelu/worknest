@@ -25,6 +25,9 @@ const envSchema = z.object({
   GROQ_API_KEY: z.string().min(1).optional(),
   AI_MODEL: z.string().min(1).default("meta-llama/llama-4-scout-17b-16e-instruct"),
   AI_SHORTLIST_THRESHOLD: z.coerce.number().min(0).max(100).default(50),
+  AI_REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(15000),
+  RATE_LIMIT_STORE_MODULE: z.string().min(1).optional(),
+  CACHE_STORE_MODULE: z.string().min(1).optional(),
 });
 
 export const validateEnv = () => {

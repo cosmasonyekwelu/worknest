@@ -1,9 +1,12 @@
 import axiosInstance from "@/utils/axiosInstance";
 import { headers } from "@/utils/constant";
+import { reportClientError } from "@/utils/clientLogger";
 
 // Helper to log and rethrow errors
 const handleError = (error) => {
-  console.error("Notification API Error:", error.response?.data || error.message);
+  reportClientError("notifications_api_error", error, {
+    endpoint: error?.config?.url || "/notifications",
+  });
   throw error;
 };
 

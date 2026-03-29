@@ -21,6 +21,7 @@ import {
 import { optionalAuth, verifyAuth, authorizedRoles } from "../middleware/authenticate.js";
 import { cacheMiddleware, clearCache } from "../middleware/cache.js";
 import uploadImage, { validateUploadedImage } from "../middleware/uploadImage.js";
+import { csrfProtection } from "../middleware/csrf.js";
 
 const router = express.Router();
 
@@ -41,7 +42,7 @@ router.get(
   authenticateAdmin,
 );
 
-router.post("/refresh-token", refreshTokenLimit, refreshAdminAccessToken);
+router.post("/refresh-token", csrfProtection, refreshTokenLimit, refreshAdminAccessToken);
 
 
 // Update admin profile (reuses userService.updateUser)
@@ -96,6 +97,6 @@ router.get(
   getAllUsers,
 );
 
-router.post("/logout", optionalAuth, clearCache("admin_profile"), logoutAdmin);
+router.post("/logout", optionalAuth, csrfProtection, clearCache("admin_profile"), logoutAdmin);
 
 export default router;

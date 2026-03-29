@@ -1,4 +1,7 @@
-import axiosInstance, { refreshClient } from "@/utils/axiosInstance";
+import axiosInstance, {
+  buildCsrfHeaders,
+  refreshClient,
+} from "@/utils/axiosInstance";
 import { headers } from "@/utils/constant";
 
 
@@ -11,15 +14,20 @@ export const getAuthenticatedAdmin = async (accessToken) => {
 };
 
  export const adminLogout = async (accessToken) => {
-  return await axiosInstance.post("/admin/logout", {}, {
+ return await axiosInstance.post("/admin/logout", {}, {
     ...headers(accessToken),
     withCredentials: true,
+    headers: {
+      ...(headers(accessToken).headers || {}),
+      ...buildCsrfHeaders(),
+    },
   });
 };
 
 export const refreshAdminAccessToken = async () => {
   return await refreshClient.post("/admin/refresh-token", null, {
     withCredentials: true,
+    headers: buildCsrfHeaders(),
   });
 };
 

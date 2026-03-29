@@ -82,7 +82,7 @@ export const connectToDB = async () => {
 
   if (dbConnection.retryCount >= dbConnection.maxRetries) {
     logger.error("Max MongoDB connection retries reached");
-    process.exit(1);
+    return null;
   }
 
   const connectionOptions = {
@@ -127,8 +127,10 @@ export const connectToDB = async () => {
       }
 
       if (dbConnection.retryCount >= dbConnection.maxRetries) {
-        logger.error("Max retries reached. Exiting.");
-        process.exit(1);
+        logger.error(
+          "Max retries reached. MongoDB will remain unavailable until the next restart.",
+        );
+        return null;
       }
 
       throw error;
@@ -169,17 +171,3 @@ export const gracefulShutdown = async (server = null) => {
 
   return dbConnection.shutdownPromise;
 };
-
-process.once("uncaughtException", (error) => {
-  logger.error("UNCAUGHT EXCEPTION! Shutting down...");
-  logger.error(error.name || "Error", error.message || "Unknown error");
-  if (error.stack) {
-    logger.error(error.stack);
-  }
-
-  gracefulShutdown()
-    .catch(() => null)
-    .finally(() => process.exit(1));
-});
-
-connectToDB().catch(() => null);

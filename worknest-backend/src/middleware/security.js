@@ -10,12 +10,25 @@ export const parseAllowedOrigins = (...rawOriginGroups) =>
     ),
   );
 
-const normalizeOrigin = (origin) => {
+export const normalizeOrigin = (origin) => {
   try {
     return new URL(origin).origin;
   } catch {
     return origin?.replace(/\/+$/, "") || "";
   }
+};
+
+export const isAllowedOrigin = (origin, allowedOrigins = []) => {
+  const normalizedIncoming = normalizeOrigin(origin);
+  const normalizedAllowlist = allowedOrigins.map(normalizeOrigin);
+
+  return normalizedAllowlist.some((allowed) => {
+    if (!allowed || allowed === "*") {
+      return false;
+    }
+
+    return normalizedIncoming === allowed;
+  });
 };
 
 export const buildCorsOptions = (allowedOrigins = []) => {
@@ -31,14 +44,7 @@ export const buildCorsOptions = (allowedOrigins = []) => {
         return callback(null, true);
       }
 
-      const normalizedIncoming = normalizeOrigin(origin);
-      const isAllowed = normalizedAllowlist.some((allowed) => {
-        if (!allowed) return false;
-        if (allowed === "*") return true;
-        return normalizedIncoming === allowed;
-      });
-
-      if (isAllowed) {
+      if (isAllowedOrigin(origin, allowedOrigins)) {
         return callback(null, true);
       }
 
@@ -47,7 +53,13 @@ export const buildCorsOptions = (allowedOrigins = []) => {
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     optionsSuccessStatus: 200,
-    allowedHeaders: ["Content-Type", "Authorization", "X-Request-Id", "X-Requested-With"],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "X-Request-Id",
+      "X-Requested-With",
+      "X-Worknest-Csrf",
+    ],
   };
 };
 

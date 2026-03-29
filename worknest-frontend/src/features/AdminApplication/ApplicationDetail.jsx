@@ -376,10 +376,16 @@ export default function ApplicationDetail({ applicationId, onBack }) {
               )}
               <button
                 onClick={handleTriggerAIReview}
-                disabled={triggerAIReviewMutation.isPending}
+                disabled={
+                  triggerAIReviewMutation.isPending ||
+                  application.aiProcessingStatus === "processing"
+                }
                 className="w-full px-4 py-2 rounded-lg bg-[#F57450] text-white font-semibold disabled:opacity-60"
               >
-                {triggerAIReviewMutation.isPending ? "Running AI..." : "Run AI Review"}
+                {triggerAIReviewMutation.isPending ||
+                application.aiProcessingStatus === "processing"
+                  ? "AI review running..."
+                  : "Run AI Review"}
               </button>
 
               <div className="border-t pt-4 space-y-3">

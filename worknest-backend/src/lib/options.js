@@ -1,5 +1,5 @@
 export const compressionOptions = {
-  level: 9,
+  level: 6,
   filter: (req, res) => {
     if (req.headers["x-no-compression"]) return false;
 

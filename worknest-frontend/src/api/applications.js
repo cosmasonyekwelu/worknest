@@ -2,6 +2,7 @@ import axiosInstance from "@/utils/axiosInstance";
 import { headers } from "@/utils/constant";
 import { getAllJobs } from "@/api/api";
 import { z } from "zod";
+import { reportClientError } from "@/utils/clientLogger";
 
 const serializeArrayParams = (params = {}) => {
   const searchParams = new URLSearchParams();
@@ -119,11 +120,12 @@ const parseEnvelope = (schema, response, label) => {
   const parsed = apiEnvelope(schema).safeParse(response.data);
 
   if (!parsed.success) {
-    if (import.meta.env.DEV) {
-      console.error(`API contract violation for ${label}`, parsed.error);
-    }
+    reportClientError("applications_contract_violation", parsed.error, {
+      label,
+      responseData: response?.data,
+    });
 
-    throw new Error("Invalid response from server");
+    throw new Error(`Invalid response from server for ${label}`);
   }
 
   return parsed.data.data;

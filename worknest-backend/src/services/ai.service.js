@@ -3,6 +3,7 @@ import { ValidationError } from "../lib/errors.js";
 
 const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
 const DEFAULT_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
+const AI_REQUEST_TIMEOUT_MS = Number(process.env.AI_REQUEST_TIMEOUT_MS || 15000);
 
 const validateRequiredPersonalInfo = (application) => {
   const info = application?.personalInfo || {};
@@ -24,20 +25,30 @@ const groqChatCompletion = async (messages, { temperature = 0.2, max_tokens = 70
 
   const model = process.env.AI_MODEL || DEFAULT_MODEL;
 
-  const response = await fetch(GROQ_API_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model,
-      messages,
-      temperature,
-      max_tokens,
-      response_format: { type: "json_object" },
-    }),
-  });
+  let response;
+  try {
+    response = await fetch(GROQ_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model,
+        messages,
+        temperature,
+        max_tokens,
+        response_format: { type: "json_object" },
+      }),
+      signal: AbortSignal.timeout(AI_REQUEST_TIMEOUT_MS),
+    });
+  } catch (error) {
+    logger.error("Groq API request failed before completion", {
+      error: error instanceof Error ? error.message : String(error),
+      timeoutMs: AI_REQUEST_TIMEOUT_MS,
+    });
+    throw new Error("AI provider request timed out");
+  }
 
   if (!response.ok) {
     const errorBody = await response.text();
@@ -74,19 +85,29 @@ const groqChatTextCompletion = async (messages, { temperature = 0.25, max_tokens
 
   const model = process.env.AI_MODEL || DEFAULT_MODEL;
 
-  const response = await fetch(GROQ_API_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model,
-      messages,
-      temperature,
-      max_tokens,
-    }),
-  });
+  let response;
+  try {
+    response = await fetch(GROQ_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model,
+        messages,
+        temperature,
+        max_tokens,
+      }),
+      signal: AbortSignal.timeout(AI_REQUEST_TIMEOUT_MS),
+    });
+  } catch (error) {
+    logger.error("Groq text request failed before completion", {
+      error: error instanceof Error ? error.message : String(error),
+      timeoutMs: AI_REQUEST_TIMEOUT_MS,
+    });
+    throw new Error("AI provider request timed out");
+  }
 
   if (!response.ok) {
     const errorBody = await response.text();
@@ -114,8 +135,8 @@ export const reviewApplication = async (job, application) => {
     job: {
       title: job?.title,
       companyName: job?.companyName,
-      requirements: job?.requirements,
-      description: job?.description,
+      requirements: job?.requirement,
+      description: job?.jobDescription,
       jobType: job?.jobType,
       location: job?.location,
       applicationQuestions: job?.applicationQuestions,
@@ -159,8 +180,8 @@ export const generateInterviewQuestions = async (job, application) => {
   const payload = {
     job: {
       title: job?.title,
-      requirements: job?.requirements,
-      description: job?.description,
+      requirements: job?.requirement,
+      description: job?.jobDescription,
     },
     application: {
       answers: application?.answers,

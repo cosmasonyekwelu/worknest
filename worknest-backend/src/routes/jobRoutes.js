@@ -20,10 +20,14 @@ import {
 import uploadImage, { validateUploadedImage } from "../middleware/uploadImage.js";
 import { validateRequest } from "../middleware/validateRequest.js";
 import { jobValidation } from "../validation/job.validation.js";
+import logger from "../config/logger.js";
 
 const router = express.Router();
 const warnLegacyRoute = (message) => (req, res, next) => {
-  console.warn(message);
+  logger.warn(message, {
+    method: req.method,
+    path: req.originalUrl,
+  });
   next();
 };
 

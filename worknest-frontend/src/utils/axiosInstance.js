@@ -1,18 +1,33 @@
 import axios from "axios";
 
-const envBaseUrl = import.meta.env.VITE_WORKNEST_BASE_URL?.trim();
-if (!envBaseUrl) {
-  throw new Error("Missing VITE_WORKNEST_BASE_URL in environment variables");
-}
+export const CSRF_HEADER_NAME = "X-Worknest-Csrf";
+export const CSRF_HEADER_VALUE = "1";
 
-let parsedBaseUrl;
-try {
-  parsedBaseUrl = new URL(envBaseUrl);
-} catch {
-  throw new Error("Invalid VITE_WORKNEST_BASE_URL. Expected a valid absolute URL.");
-}
+export const buildCsrfHeaders = () => ({
+  [CSRF_HEADER_NAME]: CSRF_HEADER_VALUE,
+  "X-Requested-With": "XMLHttpRequest",
+});
 
-const BASEURL = parsedBaseUrl.toString().replace(/\/+$/, "");
+export const resolveApiBaseUrl = ({
+  rawBaseUrl = import.meta.env.VITE_WORKNEST_BASE_URL,
+  mode = import.meta.env.MODE,
+} = {}) => {
+  const envBaseUrl = rawBaseUrl?.trim();
+  const fallbackBaseUrl = mode === "test" ? "http://localhost:5000" : "";
+  const effectiveBaseUrl = envBaseUrl || fallbackBaseUrl;
+
+  if (!effectiveBaseUrl) {
+    throw new Error("Missing VITE_WORKNEST_BASE_URL in environment variables");
+  }
+
+  try {
+    return new URL(effectiveBaseUrl).toString().replace(/\/+$/, "");
+  } catch {
+    throw new Error("Invalid VITE_WORKNEST_BASE_URL. Expected a valid absolute URL.");
+  }
+};
+
+const BASEURL = resolveApiBaseUrl();
 const TIMEOUTMSG = "Waiting for too long...Aborted!";
 const timeout = 30000;
 

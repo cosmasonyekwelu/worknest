@@ -9,7 +9,7 @@ import {
   updateApplicationStatus as updateApplicationStatusService,
   updateInternalNote as updateInternalNoteService,
   getApplicationStats as getApplicationStatsService,
-  processNewApplication,
+  queueApplicationProcessing,
   submitInterviewAnswers,
   updateApplicationPersonalInfo,
 } from "../services/application.service.js";
@@ -79,7 +79,7 @@ export const applyForJob = tryCatchFn(async (req, res) => {
 
   process.nextTick(async () => {
     try {
-      await processNewApplication(application._id, applicantId);
+      await queueApplicationProcessing(application._id, applicantId);
     } catch (error) {
       logger.error("Automatic AI processing failed for new application", {
         applicationId: application._id,
@@ -195,9 +195,9 @@ export const triggerManualAIReview = tryCatchFn(async (req, res) => {
   const { id } = req.params;
   const adminId = req.user._id;
 
-  const application = await processNewApplication(id, adminId);
+  const application = await queueApplicationProcessing(id, adminId);
 
-  return successResponse(res, application, "AI review completed", 200);
+  return successResponse(res, application, "AI review started", 202);
 });
 
 export const submitInterview = tryCatchFn(async (req, res) => {

@@ -140,7 +140,7 @@ describe("applications API contracts", () => {
         limit: 10,
         accessToken: "token-1",
       }),
-    ).rejects.toThrow("Invalid response from server");
+    ).rejects.toThrow("Invalid response from server for getMyApplications");
   });
 
   it("normalizes application detail responses with requirement and companyLogo fields", async () => {

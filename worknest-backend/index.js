@@ -7,7 +7,11 @@ import helmet from "helmet";
 import cookieParser from "cookie-parser";
 import { helmetOptions, compressionOptions } from "./src/lib/options.js";
 import logger from "./src/config/logger.js";
-import { gracefulShutdown, isDatabaseReady } from "./src/config/db.server.js";
+import {
+  connectToDB,
+  gracefulShutdown,
+  isDatabaseReady,
+} from "./src/config/db.server.js";
 import { validateEnv } from "./src/config/env.js";
 import { apiLimiter } from "./src/middleware/rateLimit.js";
 import {
@@ -69,6 +73,26 @@ const baseHealthPayload = (requestTime) => ({
   timestamp: requestTime,
 });
 
+const sendLiveHealth = (req, res) => {
+  res.status(200).json({ status: "ok", timestamp: req.requestTime });
+};
+
+const sendReadyHealth = (req, res) => {
+  if (!isDatabaseReady()) {
+    return res.status(503).json({
+      status: "not_ready",
+      database: "disconnected",
+      timestamp: req.requestTime,
+    });
+  }
+
+  return res.status(200).json({
+    status: "ready",
+    database: "connected",
+    timestamp: req.requestTime,
+  });
+};
+
 app.get("/", (req, res) => {
   res.status(200).json(baseHealthPayload(req.requestTime));
 });
@@ -106,45 +130,10 @@ app.get("/metrics/snapshot", verifyMonitoringToken, (req, res) => {
     .json({ status: "ok", data: getMetricsSnapshot(), timestamp: req.requestTime });
 });
 
-app.get("/health", (req, res) => {
-  res.status(200).json({ status: "ok", timestamp: req.requestTime });
-});
-
-app.get("/ready", (req, res) => {
-  if (!isDatabaseReady()) {
-    return res.status(503).json({
-      status: "not_ready",
-      database: "disconnected",
-      timestamp: req.requestTime,
-    });
-  }
-
-  return res.status(200).json({
-    status: "ready",
-    database: "connected",
-    timestamp: req.requestTime,
-  });
-});
-
-app.get("/health/live", (req, res) => {
-  res.status(200).json({ status: "ok", timestamp: req.requestTime });
-});
-
-app.get("/health/ready", (req, res) => {
-  if (!isDatabaseReady()) {
-    return res.status(503).json({
-      status: "not_ready",
-      database: "disconnected",
-      timestamp: req.requestTime,
-    });
-  }
-
-  return res.status(200).json({
-    status: "ready",
-    database: "connected",
-    timestamp: req.requestTime,
-  });
-});
+app.get("/health", sendLiveHealth);
+app.get("/ready", sendReadyHealth);
+app.get("/health/live", sendLiveHealth);
+app.get("/health/ready", sendReadyHealth);
 
 app.use("/api/v1/auth", userRoutes);
 app.use("/api/v1/admin", adminRoutes);
@@ -162,11 +151,32 @@ const PORT = Number(process.env.PORT) || 5000;
 
 const startServer = async () => {
   try {
+    await connectToDB().catch((error) => {
+      logger.error(
+        "Initial MongoDB connection failed. Continuing startup in degraded mode.",
+        {
+          error: error instanceof Error ? error.message : String(error),
+        },
+      );
+      return null;
+    });
+
     const server = app.listen(PORT, "0.0.0.0", () => {
       logger.info(
         `Server running in ${process.env.NODE_ENV} mode on port ${PORT}`,
       );
       logger.info(`Listening on http://0.0.0.0:${PORT}`);
+    });
+
+    process.once("uncaughtException", (error) => {
+      logger.error("Uncaught exception. Shutting down.", {
+        error: error instanceof Error ? `${error.name}: ${error.message}` : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+
+      gracefulShutdown(server)
+        .catch(() => null)
+        .finally(() => process.exit(1));
     });
 
     process.once("unhandledRejection", (reason) => {

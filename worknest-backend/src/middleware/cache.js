@@ -1,11 +1,5 @@
-import NodeCache from "node-cache";
 import logger from "../config/logger.js";
-
-export const cache = new NodeCache({
-  stdTTL: 3600,
-  checkperiod: 620,
-  useClones: false,
-});
+import { cacheStore, hasSharedCacheStore } from "../config/cacheStore.js";
 
 export const cacheMiddleware =
   (key, ttl = 600) =>
@@ -14,16 +8,28 @@ export const cacheMiddleware =
     const cacheKey = `user_${userId}_${key}_${req.originalUrl}_${JSON.stringify(req.query)}`;
 
     try {
-      const cachedData = cache.get(cacheKey);
+      const cachedData = await cacheStore.get(cacheKey);
       if (cachedData) {
-        logger.debug("Cache hit", { cacheKey });
+        logger.debug("Cache hit", {
+          cacheKey,
+          store: hasSharedCacheStore() ? "shared" : "memory",
+        });
         return res.json(cachedData);
       }
 
       const originalJSON = res.json;
       res.json = function (data) {
-        cache.set(cacheKey, data, ttl);
-        logger.debug("Cache set", { cacheKey, ttl });
+        Promise.resolve(cacheStore.set(cacheKey, data, ttl)).catch((cacheError) => {
+          logger.warn("Cache set failed", {
+            cacheKey,
+            error: cacheError instanceof Error ? cacheError.message : String(cacheError),
+          });
+        });
+        logger.debug("Cache set", {
+          cacheKey,
+          ttl,
+          store: hasSharedCacheStore() ? "shared" : "memory",
+        });
         return originalJSON.call(this, data);
       };
 
@@ -36,12 +42,14 @@ export const cacheMiddleware =
 
 export const clearCache =
   (pattern = null, clearAll = false) =>
-  (req, res, next) => {
-    const keys = cache.keys();
+  async (req, res, next) => {
+    const keys = await cacheStore.keys();
 
     if (clearAll) {
-      keys.forEach((key) => cache.del(key));
-      logger.info("Cleared all cache entries");
+      await Promise.all(keys.map((key) => cacheStore.del(key)));
+      logger.info("Cleared all cache entries", {
+        store: hasSharedCacheStore() ? "shared" : "memory",
+      });
       return next();
     }
 
@@ -55,11 +63,12 @@ export const clearCache =
         })
       : keys;
 
-    matchingKeys.forEach((key) => cache.del(key));
+    await Promise.all(matchingKeys.map((key) => cacheStore.del(key)));
     logger.info("Cleared cache entries", {
       count: matchingKeys.length,
       userId: userId || null,
       pattern,
+      store: hasSharedCacheStore() ? "shared" : "memory",
     });
 
     return next();

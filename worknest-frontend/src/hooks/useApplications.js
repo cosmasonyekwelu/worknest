@@ -71,6 +71,8 @@ export function useApplicationDetails(id) {
     queryKey: ["application-details", id],
     queryFn: () => getApplicationById({ id, accessToken }),
     enabled: authReady && !!id && !!accessToken,
+    refetchInterval: (query) =>
+      query.state.data?.aiProcessingStatus === "processing" ? 3000 : false,
   });
 }
 
@@ -197,7 +199,7 @@ export function useTriggerAIReview() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["admin-applications"] });
       queryClient.invalidateQueries({ queryKey: ["application-details", variables.applicationId] });
-      toast.success("AI review completed");
+      toast.success("AI review started");
     },
     onError: (error) => {
       toast.error(error?.response?.data?.message || "AI review failed");

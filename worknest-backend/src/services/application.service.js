@@ -57,6 +57,24 @@ const assertRequiredPersonalInfo = (application) => {
   }
 };
 
+const markApplicationProcessing = async (application, changedBy) => {
+  if (application.ai_processing_status === "processing") {
+    throw new ValidationError("AI review is already in progress");
+  }
+
+  application.ai_processing_status = "processing";
+  application.status = IN_REVIEW;
+  application.statusHistory.push({
+    status: IN_REVIEW,
+    changedAt: new Date(),
+    changedBy,
+    note: "AI review started",
+  });
+  await application.save();
+
+  return application;
+};
+
 // ------------------------------------------------------------
 // Create new application
 // ------------------------------------------------------------
@@ -126,7 +144,11 @@ export const createApplication = async (applicantId, jobId, applicationData) => 
   }
 };
 
-export const processNewApplication = async (applicationId, actorId = null) => {
+export const processNewApplication = async (
+  applicationId,
+  actorId = null,
+  options = {},
+) => {
   const application = await Application.findById(applicationId).populate("job");
   if (!application) {
     throw new NotFoundError("Application not found");
@@ -135,16 +157,9 @@ export const processNewApplication = async (applicationId, actorId = null) => {
   assertRequiredPersonalInfo(application);
 
   const changedBy = actorId || application.applicant;
-
-  application.ai_processing_status = "processing";
-  application.status = IN_REVIEW;
-  application.statusHistory.push({
-    status: IN_REVIEW,
-    changedAt: new Date(),
-    changedBy,
-    note: "AI review started",
-  });
-  await application.save();
+  if (!options.skipProcessingState) {
+    await markApplicationProcessing(application, changedBy);
+  }
 
   try {
     const aiReview = await reviewApplication(application.job, application);
@@ -194,6 +209,29 @@ export const processNewApplication = async (applicationId, actorId = null) => {
 
     throw error;
   }
+};
+
+export const queueApplicationProcessing = async (applicationId, actorId = null) => {
+  const application = await Application.findById(applicationId).populate("job");
+  if (!application) {
+    throw new NotFoundError("Application not found");
+  }
+
+  assertRequiredPersonalInfo(application);
+
+  const changedBy = actorId || application.applicant;
+  await markApplicationProcessing(application, changedBy);
+
+  setImmediate(() => {
+    processNewApplication(applicationId, actorId, { skipProcessingState: true }).catch((error) => {
+      logger.error("Queued AI application processing failed", {
+        applicationId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    });
+  });
+
+  return application;
 };
 
 export const submitInterviewAnswers = async (applicationId, applicantId, answers = []) => {
@@ -535,6 +573,7 @@ export default {
   getApplicationCountsByJobIds,
   createApplication,
   processNewApplication,
+  queueApplicationProcessing,
   submitInterviewAnswers,
   updateApplicationPersonalInfo,
   getUserApplications,

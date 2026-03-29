@@ -27,6 +27,7 @@ import {
 import { optionalAuth, verifyAuth } from "../middleware/authenticate.js";
 import { cacheMiddleware, clearCache } from "../middleware/cache.js";
 import { forgotPassword, resetPassword } from "../controllers/user.controller.js";
+import { csrfProtection } from "../middleware/csrf.js";
 
 const router = express.Router();
 
@@ -55,7 +56,7 @@ router.get(
   authenticateUser,
 );
 
-router.post("/refresh-token", refreshTokenLimit, refreshAccessToken);
+router.post("/refresh-token", csrfProtection, refreshTokenLimit, refreshAccessToken);
 
 router.patch(
   "/verify-account",
@@ -88,6 +89,6 @@ router.patch(
   resetPassword,
 );
 
-router.post("/logout", optionalAuth, clearCache("auth_user"), logout);
+router.post("/logout", optionalAuth, csrfProtection, clearCache("auth_user"), logout);
 
 export default router;

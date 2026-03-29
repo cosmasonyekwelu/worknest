@@ -43,6 +43,17 @@ test('buildCorsOptions blocks unknown origin', async () => {
   });
 });
 
+test('buildCorsOptions rejects wildcard origins when credentials are enabled', async () => {
+  const options = buildCorsOptions(['*']);
+
+  await new Promise((resolve) => {
+    options.origin('https://evil.example', (err) => {
+      assert.ok(err);
+      resolve();
+    });
+  });
+});
+
 test('getAllowedOriginsFromEnv combines CLIENT_URL and ALLOWED_ORIGINS', () => {
   const origins = getAllowedOriginsFromEnv({
     CLIENT_URL: 'http://localhost:5173',

@@ -156,7 +156,7 @@ const adminService = {
     return {
       meta: {
         currentPage: safePage,
-        totalPages: Math.ceil(total / safeLimit),
+        totalPages: Math.max(1, Math.ceil(total / safeLimit)),
         total,
         hasMore: (safePage - 1) * safeLimit + users.length < total,
         limit: safeLimit,
