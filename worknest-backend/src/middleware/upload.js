@@ -27,11 +27,13 @@ const fileFilter = (req, file, cb) => {
 /**
  * Multer middleware instance
  */
+const maxSize = Number(process.env.MAX_RESUME_SIZE || 5 * 1024 * 1024);
+
 const upload = multer({
   storage,
   fileFilter,
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB
+    fileSize: maxSize,
   },
 });
 

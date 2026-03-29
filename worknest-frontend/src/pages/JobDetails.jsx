@@ -25,6 +25,7 @@ import { useAuth } from "@/store";
 import { toast } from "sonner";
 import officeCollab from "/office_collab.jpg";
 import Avatar from "@/components/Avatar"; // ✅ Import Avatar for company logos
+import TailorResumeButton from "@/components/TailorResumeButton";
 
 export default function JobDetails() {
   const { id } = useParams();
@@ -213,6 +214,7 @@ export default function JobDetails() {
                 <Send size={16} />
                 Apply Now
               </Link>
+              <TailorResumeButton jobId={id} jobTitle={job.title} variant="secondary" />
               <button
                 onClick={handleSaveToggle}
                 disabled={saving}

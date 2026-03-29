@@ -16,6 +16,7 @@ import { applyToJob } from "@/api/applications";
 import ApplicationSuccessModal from "@/features/applicationUser/ApplicationSuccessModal";
 import { useAuth } from "@/store";
 import { toast } from "sonner";
+import { useDownloadTailoredResume, useResumeAnalysis, useTailorResume } from "@/hooks/useResume";
 
 export default function ApplicationForm() {
   const { id: jobId } = useParams();
@@ -26,6 +27,7 @@ export default function ApplicationForm() {
   // Initialize form state
   const [formState, setFormState] = useState({});
   const [cvFile, setCvFile] = useState(null);
+  const [usingTailored, setUsingTailored] = useState(false);
   const [portfolioUrl, setPortfolioUrl] = useState("");
   const [linkedinUrl, setLinkedinUrl] = useState("");
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
@@ -38,6 +40,10 @@ export default function ApplicationForm() {
     phone: "",
     currentLocation: "",
   });
+
+  const { data: resume } = useResumeAnalysis();
+  const tailorResumeMutation = useTailorResume();
+  const downloadTailoredMutation = useDownloadTailoredResume();
 
   const { data: job, isLoading: isLoadingJob } = useQuery({
     queryKey: ["job", jobId],
@@ -84,11 +90,39 @@ export default function ApplicationForm() {
         return;
       }
       setCvFile(file);
+      setUsingTailored(false);
     }
   };
 
   const removeFile = () => {
     setCvFile(null);
+    setUsingTailored(false);
+  };
+
+  const handleAttachTailored = async () => {
+    if (!resume) {
+      toast.error("Upload your base resume on the My Resume page first");
+      navigate("/resume");
+      return;
+    }
+
+    if (resume?.status !== "ready") {
+      toast.error("Resume analysis is still running. Please try again shortly.");
+      return;
+    }
+
+    try {
+      await tailorResumeMutation.mutateAsync({ jobId });
+      const downloadRes = await downloadTailoredMutation.mutateAsync({ jobId });
+      const blob = downloadRes?.data || downloadRes;
+      const fileName = `tailored-${job?.title || "resume"}.pdf`;
+      const tailoredFile = new File([blob], fileName, { type: "application/pdf" });
+      setCvFile(tailoredFile);
+      setUsingTailored(true);
+      toast.success("Tailored resume attached to this application");
+    } catch (error) {
+      // errors handled by hooks
+    }
   };
 
   const handleAddUrl = (type) => {
@@ -271,6 +305,22 @@ export default function ApplicationForm() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {/* Resume Upload */}
                 <div className="flex flex-col gap-3">
+                  {resume && (
+                    <button
+                      type="button"
+                      onClick={handleAttachTailored}
+                      disabled={tailorResumeMutation.isPending || downloadTailoredMutation.isPending}
+                      className="flex items-center justify-center gap-2 px-4 py-3 border border-orange-200 text-orange-700 bg-orange-50 rounded-xl hover:bg-orange-100 transition font-bold"
+                    >
+                      {tailorResumeMutation.isPending || downloadTailoredMutation.isPending ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Upload className="w-4 h-4" />
+                      )}
+                      Use tailored resume for this job
+                    </button>
+                  )}
+
                   <label className="flex flex-col items-center justify-center gap-3 px-5 py-8 bg-gray-50 border-2 border-dashed border-gray-200 rounded-2xl cursor-pointer hover:bg-gray-100/50 hover:border-orange-200 transition-all text-center group">
                     <input
                       type="file"
@@ -298,6 +348,11 @@ export default function ApplicationForm() {
                       >
                         <X size={14} />
                       </button>
+                      {usingTailored && (
+                        <span className="text-[10px] font-bold text-green-700 bg-green-100 px-2 py-1 rounded">
+                          Tailored
+                        </span>
+                      )}
                     </div>
                   )}
                 </div>
@@ -424,4 +479,3 @@ export default function ApplicationForm() {
     </>
   );
 }
-

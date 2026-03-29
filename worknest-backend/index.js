@@ -29,6 +29,7 @@ import applicationRoutes from "./src/routes/applicationRoutes.js";
 import contactRoutes from "./src/routes/contactRoute.js";
 import notificationRoutes from "./src/routes/notificationRoutes.js";
 import settingsRoutes from "./src/routes/settingsRoutes.js";
+import resumeRoutes from "./src/routes/resumeRoutes.js";
 
 const app = express();
 app.set("trust proxy", 1);
@@ -120,6 +121,7 @@ app.use("/api/v1/applications", applicationRoutes);
 app.use("/api/v1/contact", contactRoutes);
 app.use("/api/v1/notifications", notificationRoutes);
 app.use("/api/v1/users/me/settings", settingsRoutes);
+app.use("/api/v1/resume", resumeRoutes);
 
 app.use(catchNotFound);
 app.use(globalErrorHandler);

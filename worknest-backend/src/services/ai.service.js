@@ -66,6 +66,47 @@ const groqChatCompletion = async (messages, { temperature = 0.2, max_tokens = 70
   }
 };
 
+const groqChatTextCompletion = async (messages, { temperature = 0.25, max_tokens = 1200 } = {}) => {
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) {
+    throw new Error("GROQ_API_KEY is not configured");
+  }
+
+  const model = process.env.AI_MODEL || DEFAULT_MODEL;
+
+  const response = await fetch(GROQ_API_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model,
+      messages,
+      temperature,
+      max_tokens,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    logger.error("Groq API request failed", {
+      status: response.status,
+      errorBody,
+    });
+    throw new Error("AI provider request failed");
+  }
+
+  const data = await response.json();
+  const content = data?.choices?.[0]?.message?.content;
+
+  if (!content) {
+    throw new Error("AI provider returned an empty response");
+  }
+
+  return String(content).trim();
+};
+
 export const reviewApplication = async (job, application) => {
   validateRequiredPersonalInfo(application);
 
@@ -203,8 +244,63 @@ export const scoreInterviewAnswers = async (questionsWithAnswers = []) => {
   };
 };
 
+export const analyzeResume = async (resumeText) => {
+  if (!resumeText || !resumeText.trim()) {
+    throw new ValidationError("Resume text is required for analysis");
+  }
+
+  const prompt = {
+    role: "user",
+    content: `You are a career advisor. Given the following resume text, extract structured information and provide insights. Return JSON with fields: skills (string array), experience (array of { title, company, duration, description }), education (array of { degree, institution, year }), summary (string), careerPaths (array of { title, matchScore (0-100), feedback }), strengths (array of strings), gaps (array of strings).\nResume:\n${resumeText}`,
+  };
+
+  const result = await groqChatCompletion([
+    {
+      role: "system",
+      content: "Return strictly valid JSON following the requested shape. Avoid prose outside JSON.",
+    },
+    prompt,
+  ], { max_tokens: 900, temperature: 0.15 });
+
+  return {
+    skills: Array.isArray(result?.skills) ? result.skills : [],
+    experience: Array.isArray(result?.experience) ? result.experience : [],
+    education: Array.isArray(result?.education) ? result.education : [],
+    summary: String(result?.summary || "").trim(),
+    careerPaths: Array.isArray(result?.careerPaths) ? result.careerPaths : [],
+    strengths: Array.isArray(result?.strengths) ? result.strengths : [],
+    gaps: Array.isArray(result?.gaps) ? result.gaps : [],
+  };
+};
+
+export const tailorResumeForJob = async (resumeText, jobDescription) => {
+  if (!resumeText || !resumeText.trim()) {
+    throw new ValidationError("Resume text is required");
+  }
+
+  if (!jobDescription || !jobDescription.trim()) {
+    throw new ValidationError("Job description is required for tailoring");
+  }
+
+  const tailored = await groqChatTextCompletion([
+    {
+      role: "system",
+      content:
+        "You are a resume writer. Rewrite the resume to better match the job description while keeping factual accuracy. Return only the rewritten resume text.",
+    },
+    {
+      role: "user",
+      content: `Original Resume:\n${resumeText}\n\nJob Description:\n${jobDescription}`,
+    },
+  ], { max_tokens: 1400, temperature: 0.35 });
+
+  return tailored;
+};
+
 export default {
   reviewApplication,
   generateInterviewQuestions,
   scoreInterviewAnswers,
+  analyzeResume,
+  tailorResumeForJob,
 };

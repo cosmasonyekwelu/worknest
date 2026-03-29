@@ -5,6 +5,7 @@ import { useAuth } from "@/store";
 import { saveJob, unsaveJob } from "@/api/api";
 import { toast } from "sonner";
 import Avatar from "@/components/Avatar";
+import TailorResumeButton from "@/components/TailorResumeButton";
 
 export default function JobCard({ job, isSavedInitial = false, onToggleSave }) {
   const { accessToken } = useAuth();
@@ -107,6 +108,15 @@ export default function JobCard({ job, isSavedInitial = false, onToggleSave }) {
             </span>
           </div>
         </div>
+      </div>
+
+      <div className="mt-4 flex justify-end">
+        <TailorResumeButton
+          jobId={job._id || job.id}
+          jobTitle={job.title}
+          variant="secondary"
+          className="text-sm px-3 py-2"
+        />
       </div>
     </Link>
   );
