@@ -16,16 +16,16 @@ import { toast } from "sonner";
 import { ADMIN_PAGE_SIZE } from "@/constants/pagination";
 
 export function useMyApplications(params = {}) {
-  const { accessToken } = useAuth();
+  const { accessToken, authReady } = useAuth();
   return useQuery({
     queryKey: ["my-applications", params],
     queryFn: () => getMyApplications({ ...params, accessToken }),
-    enabled: !!accessToken,
+    enabled: authReady && !!accessToken,
   });
 }
 
 export function useAdminApplications(params = {}) {
-  const { accessToken } = useAuth();
+  const { accessToken, authReady } = useAuth();
   const {
     page = 1,
     status = "",
@@ -51,21 +51,26 @@ export function useAdminApplications(params = {}) {
       try {
         return await getAllApplications({ ...queryParams, accessToken });
       } catch (error) {
-        console.error("Failed to fetch admin applications:", error);
+        if (import.meta.env.DEV) {
+          console.debug("Admin applications request failed", {
+            status: error?.response?.status,
+            message: error?.response?.data?.message || error?.message,
+          });
+        }
         throw error;
       }
     },
-    enabled: !!accessToken,
+    enabled: authReady && !!accessToken,
     placeholderData: (previousData) => previousData,
   });
 }
 
 export function useApplicationDetails(id) {
-  const { accessToken } = useAuth();
+  const { accessToken, authReady } = useAuth();
   return useQuery({
     queryKey: ["application-details", id],
     queryFn: () => getApplicationById({ id, accessToken }),
-    enabled: !!id && !!accessToken,
+    enabled: authReady && !!id && !!accessToken,
   });
 }
 
@@ -151,11 +156,11 @@ export function useUpdateApplicationNote() {
 }
 
 export function useApplicationStats(jobId) {
-  const { accessToken } = useAuth();
+  const { accessToken, authReady } = useAuth();
   return useQuery({
     queryKey: ["application-stats", jobId],
     queryFn: () => getApplicationStats({ jobId, accessToken }),
-    enabled: !!accessToken,
+    enabled: authReady && !!accessToken,
   });
 }
 
@@ -164,7 +169,7 @@ export function useApplicationStats(jobId) {
  * Returns a map of jobId -> count
  */
 export function useJobApplicationCounts(jobIds) {
-  const { accessToken } = useAuth();
+  const { accessToken, authReady } = useAuth();
 
   return useQuery({
     queryKey: ["job-application-counts", jobIds],
@@ -177,7 +182,7 @@ export function useJobApplicationCounts(jobIds) {
         return acc;
       }, {});
     },
-    enabled: !!accessToken && jobIds && jobIds.length > 0,
+    enabled: authReady && !!accessToken && jobIds && jobIds.length > 0,
     staleTime: 30000, // Cache for 30 seconds
   });
 }

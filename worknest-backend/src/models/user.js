@@ -90,6 +90,15 @@ const userSchema = new Schema(
       type: Date,
       select: false,
     },
+    passwordResetAttempts: {
+      type: Number,
+      default: 0,
+      select: false,
+    },
+    passwordResetLockedUntil: {
+      type: Date,
+      select: false,
+    },
     refreshTokenHash: {
       type: String,
       select: false,

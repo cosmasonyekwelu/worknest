@@ -11,6 +11,12 @@ import { toast } from "sonner";
 import { useAuth } from "@/store";
 import { useWatch } from "react-hook-form";
 
+const logAuthDebug = (message, details = {}) => {
+  if (import.meta.env.DEV) {
+    console.debug(message, details);
+  }
+};
+
 export default function Signup({ toggle }) {
   const [error, setError] = useState(null);
 
@@ -33,6 +39,7 @@ export default function Signup({ toggle }) {
   const mutation = useMutation({
     mutationFn: registerUser,
     onSuccess: (response) => {
+      logAuthDebug("Registration completed", { status: response?.status });
       toast.success(response?.data?.data?.message || "Registration successful");
       const token = response?.data?.data?.accessToken;
       setAccessToken(token, "user");
@@ -40,7 +47,10 @@ export default function Signup({ toggle }) {
       navigate("/auth/verify", { replace: true });
     },
     onError: (error) => {
-      console.error(error);
+      logAuthDebug("Registration failed", {
+        status: error?.response?.status,
+        message: error?.response?.data?.data?.message || error?.message,
+      });
       setError(error?.response?.data?.data?.message || "Registration failed");
       toast.error(
         error?.response?.data?.data?.message || "Registration failed",

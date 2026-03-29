@@ -8,6 +8,12 @@ import { resendVerificationCode, verifyAccount } from "@/api/api";
 import ErrorAlert from "@/components/ErrorAlert";
 import { useAuth } from "@/store";
 
+const logAuthDebug = (message, details = {}) => {
+  if (import.meta.env.DEV) {
+    console.debug(message, details);
+  }
+};
+
 export default function Verify() {
   useMetaArgs({
     title: "Verify Account - Worknest",
@@ -75,7 +81,10 @@ export default function Verify() {
       setSuccess(true);
     },
     onError: (error) => {
-      import.meta.env.DEV && console.log(error);
+      logAuthDebug("Account verification failed", {
+        status: error?.response?.status,
+        message: error?.response?.data?.message || error?.message,
+      });
       setError(error?.response?.data?.message || "Account verifcation failed");
     },
   });
@@ -86,7 +95,10 @@ export default function Verify() {
       toast.success(response?.data?.message || "Verification token sent");
     },
     onError: (error) => {
-      import.meta.env.DEV && console.log(error);
+      logAuthDebug("Verification resend failed", {
+        status: error?.response?.status,
+        message: error?.response?.data?.message || error?.message,
+      });
       setError(error?.response?.data?.message || "Verification code failed");
     },
   });

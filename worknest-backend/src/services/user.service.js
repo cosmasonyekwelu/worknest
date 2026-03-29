@@ -9,6 +9,9 @@ import Application from "../models/application.js";
 import Resume from "../models/resume.js";
 import Notification from "../models/notification.js";
 
+const PASSWORD_RESET_MAX_ATTEMPTS = 5;
+const PASSWORD_RESET_LOCK_WINDOW_MS = 15 * 60 * 1000;
+
 const userService = {
   forgotPassword: async (req) => {
     const normalizedEmail = req.body.email?.toLowerCase().trim();
@@ -51,15 +54,27 @@ const userService = {
   },
   resetPassword: async (userData) => {
     const { email, password, confirmPassword, passwordResetToken } = userData;
+    const normalizedEmail = email.trim().toLowerCase();
+    const now = new Date();
     if (password !== confirmPassword) {
       throw new ValidationError("Passwords do not match");
     }
-    const user = await User.findOne({ email }).select(
-      "+password +passwordResetToken +passwordResetTokenExpiry",
+    const user = await User.findOne({ email: normalizedEmail }).select(
+      "+password +passwordResetToken +passwordResetTokenExpiry +passwordResetAttempts +passwordResetLockedUntil",
     );
     if (!user) {
       throw new NotFoundError("Account not found with that email");
     }
+
+    if (user.passwordResetLockedUntil && user.passwordResetLockedUntil > now) {
+      throw new ValidationError("Too many failed attempts. Try again later.");
+    }
+
+    if (user.passwordResetLockedUntil && user.passwordResetLockedUntil <= now) {
+      user.passwordResetAttempts = 0;
+      user.passwordResetLockedUntil = undefined;
+    }
+
     const hashedIncomingToken = crypto
       .createHash("sha256")
       .update(passwordResetToken)
@@ -69,23 +84,37 @@ const userService = {
       !user.passwordResetToken ||
       user.passwordResetToken !== hashedIncomingToken
     ) {
-      throw new ValidationError("Password reset token not found");
+      user.passwordResetAttempts = (user.passwordResetAttempts || 0) + 1;
+      if (user.passwordResetAttempts >= PASSWORD_RESET_MAX_ATTEMPTS) {
+        user.passwordResetLockedUntil = new Date(
+          now.getTime() + PASSWORD_RESET_LOCK_WINDOW_MS,
+        );
+      }
+      await user.save();
+
+      if (user.passwordResetLockedUntil && user.passwordResetLockedUntil > now) {
+        throw new ValidationError("Too many failed attempts. Try again later.");
+      }
+
+      throw new ValidationError("Invalid or expired reset token");
     }
     const isPasswordSame = await bcrypt.compare(password, user.password);
     if (isPasswordSame) {
       throw new ValidationError("New password must be different from old password");
     }
-    if (user.passwordResetTokenExpiry < new Date()) {
+    if (!user.passwordResetTokenExpiry || user.passwordResetTokenExpiry < now) {
       user.passwordResetToken = undefined;
       user.passwordResetTokenExpiry = undefined;
       await user.save();
-      throw new ValidationError("Password reset token has expired");
+      throw new ValidationError("Invalid or expired reset token");
     }
     const salt = await bcrypt.genSalt(12);
     const hashedPassword = await bcrypt.hash(userData.password, salt);
     user.password = hashedPassword;
     user.passwordResetToken = undefined;
     user.passwordResetTokenExpiry = undefined;
+    user.passwordResetAttempts = 0;
+    user.passwordResetLockedUntil = undefined;
     await user.save();
     await User.findByIdAndUpdate(user._id, {
       refreshTokenHash: undefined,

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AuthContext } from ".";
 import { getAuthenticatedUser, refreshAccessToken } from "@/api/api";
 import { useQuery } from "@tanstack/react-query";
@@ -8,6 +8,50 @@ import axiosInstance from "@/utils/axiosInstance";
 
 let isRefreshing = false;
 let failedQueue = [];
+const AUTH_MODE_STORAGE_KEY = "worknest-auth-mode";
+const VALID_AUTH_MODES = ["user", "admin"];
+
+const logAuthDebug = (message, details = {}) => {
+  if (import.meta.env.DEV) {
+    console.debug(message, details);
+  }
+};
+
+const getStoredAuthMode = () => {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const storedMode = window.sessionStorage.getItem(AUTH_MODE_STORAGE_KEY);
+  return VALID_AUTH_MODES.includes(storedMode) ? storedMode : null;
+};
+
+const isAdminPath = () => {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  const pathname = window.location?.pathname || "";
+  return pathname.startsWith("/admin") || pathname.startsWith("/auth/admin");
+};
+
+const getRefreshModesToTry = (preferredMode) => {
+  if (preferredMode && VALID_AUTH_MODES.includes(preferredMode)) {
+    return [
+      preferredMode,
+      ...VALID_AUTH_MODES.filter((mode) => mode !== preferredMode),
+    ];
+  }
+
+  if (typeof window !== "undefined") {
+    const pathname = window.location?.pathname || "";
+    if (pathname.startsWith("/admin") || pathname.startsWith("/auth/admin")) {
+      return ["admin", "user"];
+    }
+  }
+
+  return ["user", "admin"];
+};
 
 const processQueue = (error, token = null) => {
   failedQueue.forEach((prom) => {
@@ -24,8 +68,11 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [hasLoggedOut, setHasLoggedOut] = useState(false);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
-  const [authMode, setAuthMode] = useState(null);
+  const [authMode, setAuthModeState] = useState(() =>
+    isAdminPath() ? getStoredAuthMode() : null,
+  );
   const [accessToken, setAccessTokenState] = useState(null);
+  const hasPersistedAdminMode = useRef(authMode === "admin");
   const authClients = useMemo(
     () => ({
       user: {
@@ -42,6 +89,25 @@ export const AuthProvider = ({ children }) => {
     [],
   );
 
+  const setAuthMode = useCallback((nextAuthMode) => {
+    setAuthModeState(nextAuthMode);
+
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    if (nextAuthMode === "admin") {
+      window.sessionStorage.setItem(AUTH_MODE_STORAGE_KEY, nextAuthMode);
+      hasPersistedAdminMode.current = true;
+      return;
+    }
+
+    if (hasPersistedAdminMode.current) {
+      window.sessionStorage.removeItem(AUTH_MODE_STORAGE_KEY);
+      hasPersistedAdminMode.current = false;
+    }
+  }, []);
+
   const setAccessToken = useCallback((token, nextAuthMode) => {
     setAccessTokenState(token);
     if (nextAuthMode !== undefined) {
@@ -50,13 +116,13 @@ export const AuthProvider = ({ children }) => {
     if (token) {
       setHasLoggedOut(false);
     }
-  }, []);
+  }, [setAuthMode]);
 
   const login = useCallback((userData, mode = "user") => {
     setHasLoggedOut(false);
     setUser(userData);
     setAuthMode(mode);
-  }, []);
+  }, [setAuthMode]);
 
   const logout = useCallback(() => {
     setHasLoggedOut(true);
@@ -65,7 +131,7 @@ export const AuthProvider = ({ children }) => {
     setAuthMode(null);
     setIsAuthenticating(false);
     delete axiosInstance.defaults.headers.common.Authorization;
-  }, []);
+  }, [setAuthMode]);
 
   useEffect(() => {
     if (accessToken) {
@@ -78,13 +144,14 @@ export const AuthProvider = ({ children }) => {
 
   const refreshCurrentSession = useCallback(
     async (preferredMode = authMode) => {
-      const modesToTry = preferredMode ? [preferredMode] : ["user", "admin"];
+      const modesToTry = getRefreshModesToTry(preferredMode);
       let lastError = null;
 
       for (const mode of modesToTry) {
         const refreshConfig = authClients[mode];
 
         try {
+          logAuthDebug("Refreshing session", { mode });
           const res = await refreshConfig.refresh();
           const newToken = res?.data?.data?.accessToken;
 
@@ -93,9 +160,20 @@ export const AuthProvider = ({ children }) => {
           }
 
           setAccessToken(newToken, mode);
+          logAuthDebug("Session refresh completed", {
+            mode,
+            status: res?.status,
+          });
           return { accessToken: newToken, authMode: mode };
         } catch (error) {
-          lastError = error;
+          if (!lastError) {
+            lastError = error;
+          }
+          logAuthDebug("Session refresh failed", {
+            mode,
+            status: error?.response?.status,
+            message: error?.response?.data?.message || error?.message,
+          });
         }
       }
 
@@ -163,7 +241,7 @@ export const AuthProvider = ({ children }) => {
     return () => {
       axiosInstance.interceptors.response.eject(responseInterceptor);
     };
-  }, [authMode, logout, refreshCurrentSession]);
+  }, [authMode, logout, refreshCurrentSession, setAuthMode]);
 
   const refreshSessionQuery = useQuery({
     queryKey: ["refresh_token", authMode],
@@ -174,6 +252,12 @@ export const AuthProvider = ({ children }) => {
     refetchOnReconnect: false,
     throwOnError: false,
   });
+
+  const authReady =
+    !!accessToken ||
+    hasLoggedOut ||
+    refreshSessionQuery.isSuccess ||
+    refreshSessionQuery.isError;
 
   useQuery({
     queryKey: [authMode ? authClients[authMode].profileKey : "auth_user", accessToken, authMode],
@@ -194,7 +278,11 @@ export const AuthProvider = ({ children }) => {
           setUser(null);
           setAccessToken(null, null);
         }
-        console.log(err?.response?.data?.message);
+        logAuthDebug("Authenticated profile lookup failed", {
+          mode: authMode || "user",
+          status: err?.response?.status,
+          message: err?.response?.data?.message || err?.message,
+        });
         throw err;
       } finally {
         setIsAuthenticating(false);
@@ -210,7 +298,7 @@ export const AuthProvider = ({ children }) => {
 
   const authBusy =
     isAuthenticating ||
-    (!accessToken && !hasLoggedOut && refreshSessionQuery.isPending);
+    (!authReady && !hasLoggedOut);
 
   if (authBusy) {
     return <SuspenseUi />;
@@ -226,6 +314,7 @@ export const AuthProvider = ({ children }) => {
         setAccessToken,
         authMode,
         setAuthMode,
+        authReady,
         isAuthenticating: authBusy,
       }}
     >

@@ -11,6 +11,11 @@ import { useAuth } from "@/store";
 import { toast } from "sonner";
 import { loginUser } from "@/api/api";
 
+const logAuthDebug = (message, details = {}) => {
+  if (import.meta.env.DEV) {
+    console.debug(message, details);
+  }
+};
 
 export default function Login() {
   useMetaArgs({
@@ -36,14 +41,17 @@ export default function Login() {
   const mutation = useMutation({
     mutationFn: loginUser,
     onSuccess: (response) => {
-      console.log(response);
+      logAuthDebug("User login completed", { status: response?.status });
       toast.success(response?.data?.data?.message || "Login successful");
       const token = response?.data?.data?.accessToken;
       setAccessToken(token, "user");
       navigate(from, { replace: true });
     },
     onError: (error) => {
-      import.meta.env.DEV && console.log(error);
+      logAuthDebug("User login failed", {
+        status: error?.response?.status,
+        message: error?.response?.data?.message || error?.message,
+      });
       setError(error?.response?.data?.message || "Login failed");
       toast.error(error?.response?.data?.message || "Login failed");
     },

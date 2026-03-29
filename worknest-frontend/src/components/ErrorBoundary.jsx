@@ -4,7 +4,10 @@ export default function ErrorBoundary() {
   const error = useRouteError();
 
   if (import.meta.env.DEV) {
-    console.error(error);
+    console.error(
+      "Route error",
+      error instanceof Error ? error.message : error?.statusText || "Unknown error",
+    );
   }
 
   let message = "Oops!";
@@ -20,7 +23,9 @@ export default function ErrorBoundary() {
   } else if (import.meta.env.DEV && error instanceof Error) {
     details = error?.response?.data?.message || error.message;
     stack = error.stack;
-    console.log(stack);
+    if (stack) {
+      console.debug("ErrorBoundary stack captured");
+    }
   }
 
   const authErrors = ["jwt expired", "jwt malformed"];
@@ -30,7 +35,7 @@ export default function ErrorBoundary() {
   // };
 const redirect = () => {
   if (authErrors.includes(details)) {
-    window.location.href = "/login";
+    window.location.href = "/auth/login";
   } else {
     window.history.back();
   }

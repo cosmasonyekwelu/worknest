@@ -11,6 +11,12 @@ import { useForm } from "react-hook-form";
 import { useNavigate, useSearchParams } from "react-router";
 import { toast } from "sonner";
 
+const logAuthDebug = (message, details = {}) => {
+  if (import.meta.env.DEV) {
+    console.debug(message, details);
+  }
+};
+
 export default function ResetPassword() {
   useMetaArgs({
     title: "Reset-Password - Worknest",
@@ -45,7 +51,10 @@ export default function ResetPassword() {
       }
     },
     onError: (error) => {
-      import.meta.env.DEV && console.log(error);
+      logAuthDebug("Password reset failed", {
+        status: error?.response?.status,
+        message: error?.response?.data?.message || error?.message,
+      });
       setError(error?.response?.data?.message);
       toast.error(error?.response?.data?.message || "Password reset failed");
     },

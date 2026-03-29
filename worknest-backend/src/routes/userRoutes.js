@@ -12,6 +12,7 @@ import {
 import {
   forgotPasswordLimiter,
   rateLimiter,
+  resetPasswordLimiter,
   refreshTokenLimit,
 } from "../middleware/rateLimit.js";
 import { validateFormData } from "../middleware/validateForm.js";
@@ -82,6 +83,7 @@ router.post(
 router.patch(
   "/reset-password",
   rateLimiter,
+  resetPasswordLimiter,
   validateFormData(validateResetPasswordSchema),
   resetPassword,
 );

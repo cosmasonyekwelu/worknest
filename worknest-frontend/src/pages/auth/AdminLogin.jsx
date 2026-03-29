@@ -10,6 +10,12 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
+const logAuthDebug = (message, details = {}) => {
+  if (import.meta.env.DEV) {
+    console.debug(message, details);
+  }
+};
+
 export default function AdminLogin() {
   useMetaArgs({
     title: "Admin Login - Worknest",
@@ -28,11 +34,15 @@ export default function AdminLogin() {
   const mutation = useMutation({
     mutationFn: loginAdmin,
     onSuccess: (response) => {
+      logAuthDebug("Admin login completed", { status: response?.status });
       toast.success(response?.data?.data?.message || "Login successful");
       setAccessToken(response?.data?.data?.accessToken, "admin");
     },
     onError: (error) => {
-      import.meta.env.DEV && console.log(error);
+      logAuthDebug("Admin login failed", {
+        status: error?.response?.status,
+        message: error?.response?.data?.message || error?.message,
+      });
       setError(error?.response?.data?.message || "Login failed");
        toast.error(error?.response?.data?.message || "Login failed");
     },

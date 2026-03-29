@@ -10,6 +10,12 @@ import { useForm } from "react-hook-form";
 import { Link } from "react-router";
 import { toast } from "sonner";
 
+const logAuthDebug = (message, details = {}) => {
+  if (import.meta.env.DEV) {
+    console.debug(message, details);
+  }
+};
+
 export default function ForgotPassword() {
   useMetaArgs({
     title: "Forgot-Password - Worknest",
@@ -31,7 +37,10 @@ export default function ForgotPassword() {
       toast.success(response?.data?.message || "Password reset link sent");
     },
     onError: (error) => {
-      import.meta.env.DEV && console.log(error);
+      logAuthDebug("Forgot password request failed", {
+        status: error?.response?.status,
+        message: error?.response?.data?.message || error?.message,
+      });
       setError(
         error?.response?.data?.message || "Failed to send password link"
       );

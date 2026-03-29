@@ -12,6 +12,12 @@ import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { Pencil, Eye, EyeOff } from "lucide-react";
 
+const logAuthDebug = (message, details = {}) => {
+  if (import.meta.env.DEV) {
+    console.debug(message, details);
+  }
+};
+
 export default function ChangePassword() {
   useMetaArgs({
     title: "Change Password - Worknest",
@@ -53,7 +59,10 @@ export default function ChangePassword() {
       navigate("/"); // Navigate to home or dashboard after success
     },
     onError: (error) => {
-      console.error("Change Password Error:", error);
+      logAuthDebug("Password change failed", {
+        status: error?.response?.status,
+        message: error?.response?.data?.message || error?.message,
+      });
       const msg =
         error?.response?.data?.message ||
         error?.message ||

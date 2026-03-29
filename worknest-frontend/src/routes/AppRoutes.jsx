@@ -126,9 +126,11 @@ const router = createBrowserRouter([
           {
             path: "profile",
             element: (
-              <Suspense fallback={<SuspenseUi />}>
-                <Profile />
-              </Suspense>
+              <PrivateRouteGate>
+                <Suspense fallback={<SuspenseUi />}>
+                  <Profile />
+                </Suspense>
+              </PrivateRouteGate>
             ),
           },
           {

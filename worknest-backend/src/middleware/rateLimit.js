@@ -45,6 +45,19 @@ export const forgotPasswordLimiter = rateLimit({
   },
 });
 
+export const resetPasswordLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message:
+    "Too many password reset attempts for this email address. Please wait and try again.",
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => {
+    const emailKey = normalizeEmailKey(req.body?.email) || "unknown-email";
+    return `${ipKeyGenerator(req.ip)}-${emailKey}`;
+  },
+});
+
 // Rate limit for high-write application endpoint
 export const applyJobLimiter = rateLimit({
   windowMs: 10 * 60 * 1000,
