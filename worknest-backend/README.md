@@ -30,6 +30,7 @@ JWT_ACCESS_SECRET_KEY=change_me_access
 JWT_REFRESH_SECRET_KEY=change_me_refresh
 JWT_ACCESS_TOKEN_EXPIRES=15m
 JWT_REFRESH_TOKEN_EXPIRES=7d
+MONITORING_TOKEN=change_me_monitoring_token
 
 BREVO_API_KEY=...
 BREVO_SENDER_EMAIL=no-reply@example.com
@@ -47,13 +48,14 @@ AI_SHORTLIST_THRESHOLD=50
 ## Security/Operations Notes
 - In production, HTTP requests are rejected unless `x-forwarded-proto=https` or direct TLS is used.
 - CORS is allowlist-based from `CLIENT_URL`.
-- Refresh token endpoints accept token from secure cookie (web), bearer header, or request body (mobile fallback).
+- Refresh token endpoints accept the refresh token from the secure cookie only.
+- Metrics endpoints require an `x-monitoring-token` header that matches `MONITORING_TOKEN`.
 
 ## Operational Endpoints
 - `GET /health` and `GET /health/live`
 - `GET /ready` and `GET /health/ready`
-- `GET /metrics` (Prometheus text)
-- `GET /metrics/snapshot` (JSON)
+- `GET /metrics` (Prometheus text, protected)
+- `GET /metrics/snapshot` (JSON, protected)
 
 ## Docker
 Development:

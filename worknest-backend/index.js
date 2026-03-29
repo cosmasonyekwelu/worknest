@@ -64,12 +64,28 @@ app.get("/", (req, res) => {
   });
 });
 
-app.get("/metrics", (req, res) => {
+const verifyMonitoringToken = (req, res, next) => {
+  const expectedToken = process.env.MONITORING_TOKEN;
+  const providedToken = req.get("x-monitoring-token");
+
+  if (!expectedToken) {
+    logger.warn("Monitoring endpoint requested without MONITORING_TOKEN configured");
+    return res.status(503).json({ error: "Monitoring is not configured" });
+  }
+
+  if (!providedToken || providedToken !== expectedToken) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  return next();
+};
+
+app.get("/metrics", verifyMonitoringToken, (req, res) => {
   res.set("Content-Type", "text/plain; version=0.0.4");
   res.status(200).send(buildPrometheusMetrics());
 });
 
-app.get("/metrics/snapshot", (req, res) => {
+app.get("/metrics/snapshot", verifyMonitoringToken, (req, res) => {
   res.status(200).json({ status: "ok", data: getMetricsSnapshot(), timestamp: req.requestTime });
 });
 

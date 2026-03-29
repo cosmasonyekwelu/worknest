@@ -11,8 +11,7 @@
 ## Authentication Flow
 - Access token: short-lived bearer JWT.
 - Refresh token: rotating JWT persisted as hashed token state in DB.
-- Refresh input fallback order for clients:
-  1) secure cookie, 2) Authorization Bearer, 3) `refreshToken` in body.
+- Refresh token input: secure HTTP-only cookie only.
 
 ## Caching Strategy
 - In-process cache (`node-cache`) used for low-latency auth/profile reads.
@@ -25,8 +24,8 @@
 - If DB application creation fails after upload, uploaded object is removed (compensating rollback).
 
 ## Observability
-- `/metrics` endpoint exports Prometheus-compatible counters.
-- `/metrics/snapshot` gives JSON diagnostics for quick inspection.
+- `/metrics` endpoint exports Prometheus-compatible counters and requires `x-monitoring-token`.
+- `/metrics/snapshot` gives JSON diagnostics for quick inspection and requires `x-monitoring-token`.
 - `/health` and `/ready` available for orchestration probes.
 
 ## Data Integrity

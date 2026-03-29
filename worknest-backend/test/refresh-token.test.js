@@ -12,24 +12,24 @@ test('getRefreshTokenFromRequest prioritizes cookie token', () => {
   assert.equal(getRefreshTokenFromRequest(req, 'userRefreshToken'), 'cookie-token');
 });
 
-test('getRefreshTokenFromRequest falls back to authorization header', () => {
+test('getRefreshTokenFromRequest throws when cookie token is missing even if header is present', () => {
   const req = {
     cookies: {},
     headers: { authorization: 'Bearer header-token' },
     body: {},
   };
 
-  assert.equal(getRefreshTokenFromRequest(req, 'userRefreshToken'), 'header-token');
+  assert.throws(() => getRefreshTokenFromRequest(req, 'userRefreshToken'));
 });
 
-test('getRefreshTokenFromRequest falls back to request body for mobile clients', () => {
+test('getRefreshTokenFromRequest throws when cookie token is missing even if request body is present', () => {
   const req = {
     cookies: {},
     headers: {},
     body: { refreshToken: 'body-token' },
   };
 
-  assert.equal(getRefreshTokenFromRequest(req, 'userRefreshToken'), 'body-token');
+  assert.throws(() => getRefreshTokenFromRequest(req, 'userRefreshToken'));
 });
 
 test('getRefreshTokenFromRequest throws when token is missing', () => {

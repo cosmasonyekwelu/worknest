@@ -48,7 +48,7 @@ export default function TailorResumeButton({ jobId, jobTitle = "", variant = "pr
         setIsModalOpen(true);
         toast.success("Tailored resume ready");
       }
-    } catch (error) {
+    } catch {
       // onError in hook already toasts
     }
   };
@@ -76,7 +76,7 @@ export default function TailorResumeButton({ jobId, jobTitle = "", variant = "pr
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
-    } catch (error) {
+    } catch {
       // handled by hook
     } finally {
       setDownloadingFormat(null);
@@ -96,7 +96,7 @@ export default function TailorResumeButton({ jobId, jobTitle = "", variant = "pr
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
-    } catch (error) {
+    } catch {
       // handled by hook
     } finally {
       setDownloadingFormat(null);

@@ -39,3 +39,12 @@ test('validateEnv throws when required value missing', () => {
   assert.throws(() => validateEnv());
   process.env = backup;
 });
+
+test('validateEnv requires MONITORING_TOKEN in production', () => {
+  const backup = { ...process.env };
+  Object.assign(process.env, baseEnv, { NODE_ENV: 'production' });
+  delete process.env.MONITORING_TOKEN;
+
+  assert.throws(() => validateEnv(), /MONITORING_TOKEN/);
+  process.env = backup;
+});

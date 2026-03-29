@@ -120,7 +120,7 @@ export default function ApplicationForm() {
       setCvFile(tailoredFile);
       setUsingTailored(true);
       toast.success("Tailored resume attached to this application");
-    } catch (error) {
+    } catch {
       // errors handled by hooks
     }
   };

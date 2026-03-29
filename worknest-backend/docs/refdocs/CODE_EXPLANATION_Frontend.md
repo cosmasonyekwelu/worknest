@@ -68,9 +68,7 @@ export default function App() {
     <>
       <Toaster position="top-right" richColors />
       <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <AppRoutes/>
-        </AuthProvider>
+        <AppRoutes />
       </QueryClientProvider>
     </>
   );
@@ -81,8 +79,7 @@ What this does step-by-step:
 1. Creates a React Query client.
 2. Enables toast notifications globally.
 3. Wraps the app in `QueryClientProvider` so every page can fetch/cache server data.
-4. Wraps with `AuthProvider` to keep authentication state available everywhere. or  Wraps the app in an authentication context to track user login status.
-5. Renders all routes with `AppRoutes`.
+4. Renders `AppRoutes`, which mounts `AuthProvider` inside the router so auth logic can react to live route changes.
 
 ---
 
@@ -213,10 +210,7 @@ How it works:
 ```jsx
 // src/store/AuthProvider.jsx
 const [user, setUser] = useState(null);
-const [accessToken, setAccessToken] = useState(() => {
-  const token = localStorage.getItem("worknestToken");
-  return token;
-});
+const [accessToken, setAccessTokenState] = useState(null);
 
 useQuery({
   queryKey: [isAdminPath ? "admin_profile" : "auth_user", accessToken],
@@ -243,7 +237,6 @@ useQuery({
   },
   enabled: !accessToken && !hasLoggedOut,
   retry: false,
-  onError: logout,
 });
 ```
 
@@ -251,6 +244,7 @@ Simple explanation:
 - Auth state (`user`, `token`) is stored globally in context.
 - If token exists, app fetches current user profile.
 - If token is missing, it tries refreshing through cookie-based endpoint.
+- Access tokens stay in memory only and are never persisted to `localStorage`.
 - On failure, user is logged out safely.
 
 ---
@@ -285,7 +279,7 @@ This is a good example of real app behavior:
 A normal protected flow:
 1. User logs in on frontend (`/auth/login`).
 2. Backend returns access token + refresh cookie.
-3. Frontend stores token in context/localStorage.
+3. Frontend stores the access token in React state/context only.
 4. AuthProvider fetches profile and keeps session active.
 5. Feature pages call API helpers (jobs/applications/admin).
 6. If access token expires, frontend requests refresh endpoint using cookie.
@@ -368,9 +362,9 @@ Environment variables (from code usage):
 
 ## 9. Testing
 
-Frontend has testing dependency setup (`vitest`) in `package.json`, but there are no actual test files in this repository snapshot.
-
-So, this project is **test-ready** but currently appears to rely mostly on manual verification.
+Frontend tests now cover:
+- `AuthProvider` refresh-on-401 behavior and logout-on-refresh-failure behavior.
+- `ProtectedRoutes` redirects for unauthenticated access and successful rendering for authenticated users.
 
 ---
 

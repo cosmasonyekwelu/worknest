@@ -13,6 +13,7 @@ const envSchema = z.object({
   JWT_SECRET_KEY: z.string().min(16).optional(),
   JWT_ACCESS_TOKEN_EXPIRES: z.string().default("15m"),
   JWT_REFRESH_TOKEN_EXPIRES: z.string().default("7d"),
+  MONITORING_TOKEN: z.string().min(16).optional(),
   BREVO_API_KEY: z.string().min(1),
   BREVO_SENDER_EMAIL: z.string().email(),
   BREVO_SENDER_NAME: z.string().min(1),
@@ -49,6 +50,9 @@ export const validateEnv = () => {
     }
     if (accessSecret === refreshSecret) {
       throw new Error("Production Error: Access and Refresh secrets must be different");
+    }
+    if (!values.MONITORING_TOKEN) {
+      throw new Error("Production Error: MONITORING_TOKEN is required");
     }
   } else {
     if (!accessSecret || !refreshSecret) {

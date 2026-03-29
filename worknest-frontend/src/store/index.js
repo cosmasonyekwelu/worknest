@@ -1,7 +1,7 @@
 import { createContext, useContext } from "react";
 
 export const AuthContext = createContext({
-  accessToken: "",
+  accessToken: null,
   setAccessToken: () => {},
   user: null,
   isAuthenticating: false,

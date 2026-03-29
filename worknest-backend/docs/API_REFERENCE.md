@@ -22,7 +22,7 @@ Login for applicant users.
 Get authenticated user profile.
 
 ### `POST /auth/refresh-token`
-Refresh access token using refresh-token cookie.
+Refresh access token using the HTTP-only refresh-token cookie.
 
 ### `PATCH /auth/verify-account`
 Verify account with verification token.
@@ -76,7 +76,7 @@ Admin-only login endpoint.
 Get authenticated admin profile.
 
 ### `POST /admin/refresh-token`
-Refresh admin access token.
+Refresh admin access token using the HTTP-only refresh-token cookie.
 
 ### `PATCH /admin/profile`
 Update admin profile.
@@ -171,7 +171,7 @@ Lightweight liveness probe.
 Readiness probe that verifies database connectivity.
 
 ### `GET /metrics`
-Prometheus text metrics output for request volume, route-level errors, and duration totals.
+Prometheus text metrics output for request volume, route-level errors, and duration totals. Requires `x-monitoring-token`.
 
 ### `GET /metrics/snapshot`
-JSON metrics snapshot for quick debugging.
+JSON metrics snapshot for quick debugging. Requires `x-monitoring-token`.

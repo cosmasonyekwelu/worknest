@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { AuthContext } from ".";
 import { getAuthenticatedUser, refreshAccessToken } from "@/api/api";
 import { useQuery } from "@tanstack/react-query";
 import SuspenseUi from "@/components/SuspenseUi";
 import { getAuthenticatedAdmin, refreshAdminAccessToken } from "@/api/admin";
 import axiosInstance, { refreshClient } from "@/utils/axiosInstance";
+import { useLocation } from "react-router-dom";
 
 let isRefreshing = false;
 let failedQueue = [];
@@ -21,34 +22,45 @@ const processQueue = (error, token = null) => {
 };
 
 export const AuthProvider = ({ children }) => {
+  const location = useLocation();
   const [user, setUser] = useState(null);
   const [hasLoggedOut, setHasLoggedOut] = useState(false);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
-  const pathname = window.location.pathname;
-  const isAdminPath = pathname.startsWith("/admin") || pathname.startsWith("/auth/admin");
-  const [accessToken, setAccessToken] = useState(() => {
-    const token = localStorage.getItem("worknestToken");
-    return token;
-  });
+  const isAdminPath = useMemo(
+    () =>
+      location.pathname.startsWith("/admin") ||
+      location.pathname.startsWith("/auth/admin"),
+    [location.pathname],
+  );
+  const [accessToken, setAccessTokenState] = useState(null);
+
+  const setAccessToken = useCallback((token) => {
+    setAccessTokenState(token);
+    if (token) {
+      setHasLoggedOut(false);
+    }
+  }, []);
+
+  const login = useCallback((userData) => {
+    setHasLoggedOut(false);
+    setUser(userData);
+  }, []);
+
+  const logout = useCallback(() => {
+    setHasLoggedOut(true);
+    setUser(null);
+    setAccessTokenState(null);
+    setIsAuthenticating(false);
+    delete axiosInstance.defaults.headers.common.Authorization;
+  }, []);
 
   useEffect(() => {
     if (accessToken) {
-      localStorage.setItem("worknestToken", accessToken);
-    } else {
-      localStorage.removeItem("worknestToken");
+      axiosInstance.defaults.headers.common.Authorization = `Bearer ${accessToken}`;
+      return;
     }
-  }, [accessToken]);
 
-  const login = (userData) => setUser(userData);
-
-  const logout = () => {
-    setHasLoggedOut(true);
-    setUser(null);
-    setAccessToken(null);
-  };
-
-  useEffect(() => {
-    axiosInstance.defaults.headers.common.Authorization = accessToken ? `Bearer ${accessToken}` : undefined;
+    delete axiosInstance.defaults.headers.common.Authorization;
   }, [accessToken]);
 
   useEffect(() => {
@@ -107,7 +119,7 @@ export const AuthProvider = ({ children }) => {
     return () => {
       axiosInstance.interceptors.response.eject(responseInterceptor);
     };
-  }, [logout, setAccessToken, isAdminPath]);
+  }, [isAdminPath, logout, setAccessToken]);
 
   useQuery({
     queryKey: [isAdminPath ? "admin_profile" : "auth_user", accessToken],
@@ -146,23 +158,27 @@ export const AuthProvider = ({ children }) => {
   useQuery({
     queryKey: ["refresh_token", isAdminPath],
     queryFn: async () => {
-      const refresh = isAdminPath
-        ? refreshAdminAccessToken
-        : refreshAccessToken;
+      try {
+        const refresh = isAdminPath
+          ? refreshAdminAccessToken
+          : refreshAccessToken;
 
-      const res = await refresh();
-      const newToken = res?.data?.data?.accessToken;
+        const res = await refresh();
+        const newToken = res?.data?.data?.accessToken;
 
-      if (!newToken) {
-        throw new Error("Refresh failed");
+        if (!newToken) {
+          throw new Error("Refresh failed");
+        }
+
+        setAccessToken(newToken);
+        return newToken;
+      } catch (error) {
+        logout();
+        throw error;
       }
-
-      setAccessToken(newToken);
-      return newToken;
     },
     enabled: !accessToken && !hasLoggedOut,
     retry: false,
-    onError: logout,
     refetchOnWindowFocus: false,
   });
 

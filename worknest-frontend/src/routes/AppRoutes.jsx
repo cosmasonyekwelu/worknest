@@ -1,10 +1,11 @@
 import { lazy, Suspense } from "react";
-import { createBrowserRouter, RouterProvider } from "react-router";
+import { createBrowserRouter, Outlet, RouterProvider } from "react-router-dom";
 import SuspenseUi from "@/components/SuspenseUi.jsx";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import HomePage from "@/pages/HomePage";
 import { PrivateRoutes, PublicRoutes } from "@/routes/ProtectedRoutes";
 import { useAuth } from "@/store";
+import { AuthProvider } from "@/store/AuthProvider";
 
 // lazy layouts
 const MainLayout = lazy(() => import("@/layouts/MainLayout.jsx"));
@@ -45,258 +46,286 @@ const AdminJobDetails = lazy(
 const AdminJobApplications = lazy(
   () => import("@/pages/dashboard/AdminJobApplications.jsx"),
 );
-
 const AdminSettings = lazy(() => import("@/pages/dashboard/AdminSettings.jsx"));
 const AdminNotifications = lazy(
   () => import("@/pages/dashboard/AdminNotifications.jsx"),
 );
 
+function AuthBoundary() {
+  return (
+    <AuthProvider>
+      <Outlet />
+    </AuthProvider>
+  );
+}
+
+function PublicRouteGate({ children }) {
+  const { accessToken, user } = useAuth();
+
+  return (
+    <PublicRoutes accessToken={accessToken} user={user}>
+      {children}
+    </PublicRoutes>
+  );
+}
+
+function PrivateRouteGate({ children }) {
+  const { accessToken, user, isAuthenticating } = useAuth();
+
+  return (
+    <PrivateRoutes
+      accessToken={accessToken}
+      isAuthenticating={isAuthenticating}
+      user={user}
+    >
+      {children}
+    </PrivateRoutes>
+  );
+}
+
+const router = createBrowserRouter([
+  {
+    element: <AuthBoundary />,
+    children: [
+      {
+        path: "/auth",
+        element: (
+          <PublicRouteGate>
+            <Suspense fallback={<SuspenseUi />}>
+              <AuthLayout />
+            </Suspense>
+          </PublicRouteGate>
+        ),
+        errorElement: <ErrorBoundary />,
+        children: [
+          { path: "login", element: <Login /> },
+          { path: "signup", element: <Signup /> },
+          { path: "forgot-password", element: <ForgotPassword /> },
+          { path: "reset-password", element: <ResetPassword /> },
+          { path: "verify", element: <Verify /> },
+          { path: "admin/login", element: <AdminLogin /> },
+        ],
+      },
+      {
+        path: "/",
+        element: (
+          <Suspense fallback={<SuspenseUi />}>
+            <MainLayout />
+          </Suspense>
+        ),
+        errorElement: <ErrorBoundary />,
+        children: [
+          {
+            index: true,
+            element: (
+              <Suspense fallback={<SuspenseUi />}>
+                <HomePage />
+              </Suspense>
+            ),
+          },
+          {
+            path: "profile",
+            element: (
+              <Suspense fallback={<SuspenseUi />}>
+                <Profile />
+              </Suspense>
+            ),
+          },
+          {
+            path: "settings",
+            element: (
+              <PrivateRouteGate>
+                <Suspense fallback={<SuspenseUi />}>
+                  <Settings />
+                </Suspense>
+              </PrivateRouteGate>
+            ),
+          },
+          {
+            path: "jobs",
+            element: (
+              <Suspense fallback={<SuspenseUi />}>
+                <Jobs />
+              </Suspense>
+            ),
+          },
+          {
+            path: "jobs/:id",
+            element: (
+              <PrivateRouteGate>
+                <Suspense fallback={<SuspenseUi />}>
+                  <JobDetails />
+                </Suspense>
+              </PrivateRouteGate>
+            ),
+          },
+          {
+            path: "auth/change-password",
+            element: (
+              <PrivateRouteGate>
+                <Suspense fallback={<SuspenseUi />}>
+                  <ChangePassword />
+                </Suspense>
+              </PrivateRouteGate>
+            ),
+          },
+          {
+            path: "apply/:id",
+            element: (
+              <PrivateRouteGate>
+                <Suspense fallback={<SuspenseUi />}>
+                  <CandidateApplicationForm />
+                </Suspense>
+              </PrivateRouteGate>
+            ),
+          },
+          {
+            path: "/about",
+            element: (
+              <Suspense fallback={<SuspenseUi />}>
+                <AboutUs />
+              </Suspense>
+            ),
+          },
+          {
+            path: "/contact",
+            element: (
+              <Suspense fallback={<SuspenseUi />}>
+                <ContactUs />
+              </Suspense>
+            ),
+          },
+          {
+            path: "/privacy-policy",
+            element: (
+              <Suspense fallback={<SuspenseUi />}>
+                <PrivacyPolicy />
+              </Suspense>
+            ),
+          },
+          {
+            path: "/terms-of-service",
+            element: (
+              <Suspense fallback={<SuspenseUi />}>
+                <TermsOfService />
+              </Suspense>
+            ),
+          },
+          {
+            path: "/my-applications",
+            element: (
+              <PrivateRouteGate>
+                <Suspense fallback={<SuspenseUi />}>
+                  <MyApplications />
+                </Suspense>
+              </PrivateRouteGate>
+            ),
+          },
+          {
+            path: "/resume",
+            element: (
+              <PrivateRouteGate>
+                <Suspense fallback={<SuspenseUi />}>
+                  <MyResume />
+                </Suspense>
+              </PrivateRouteGate>
+            ),
+          },
+          {
+            path: "/applications/:id/interview",
+            element: (
+              <PrivateRouteGate>
+                <Suspense fallback={<SuspenseUi />}>
+                  <ApplicationInterview />
+                </Suspense>
+              </PrivateRouteGate>
+            ),
+          },
+          {
+            path: "/saved-jobs",
+            element: (
+              <PrivateRouteGate>
+                <Suspense fallback={<SuspenseUi />}>
+                  <SavedJobs />
+                </Suspense>
+              </PrivateRouteGate>
+            ),
+          },
+        ],
+      },
+      {
+        path: "/admin",
+        element: (
+          <PrivateRouteGate>
+            <Suspense fallback={<SuspenseUi />}>
+              <DashboardLayout />
+            </Suspense>
+          </PrivateRouteGate>
+        ),
+        errorElement: <ErrorBoundary />,
+        children: [
+          {
+            index: true,
+            element: (
+              <Suspense fallback={<SuspenseUi />}>
+                <DashboardHome />
+              </Suspense>
+            ),
+          },
+          {
+            path: "jobs",
+            element: (
+              <Suspense fallback={<SuspenseUi />}>
+                <AdminJobs />
+              </Suspense>
+            ),
+          },
+          {
+            path: "jobs/:id",
+            element: (
+              <Suspense fallback={<SuspenseUi />}>
+                <AdminJobDetails />
+              </Suspense>
+            ),
+          },
+          {
+            path: "jobs/:jobId/applications",
+            element: (
+              <Suspense fallback={<SuspenseUi />}>
+                <AdminJobApplications />
+              </Suspense>
+            ),
+          },
+          {
+            path: "applications",
+            element: (
+              <Suspense fallback={<SuspenseUi />}>
+                <AdminApplications />
+              </Suspense>
+            ),
+          },
+          {
+            path: "settings",
+            element: (
+              <Suspense fallback={<SuspenseUi />}>
+                <AdminSettings />
+              </Suspense>
+            ),
+          },
+          {
+            path: "notifications",
+            element: (
+              <Suspense fallback={<SuspenseUi />}>
+                <AdminNotifications />
+              </Suspense>
+            ),
+          },
+        ],
+      },
+    ],
+  },
+]);
 
 export default function AppRoutes() {
-  const { accessToken, user, isAuthenticating } = useAuth();
-  const privateRouteProps = { accessToken, isAuthenticating, user };
-
-  const routes = [
-    {
-      path: "/auth",
-      element: (
-        <PublicRoutes accessToken={accessToken} user={user}>
-          <Suspense fallback={<SuspenseUi />}>
-            <AuthLayout />
-          </Suspense>
-        </PublicRoutes>
-      ),
-      errorElement: <ErrorBoundary />,
-
-      children: [
-        { path: "login", element: <Login /> },
-        { path: "signup", element: <Signup /> },
-        { path: "forgot-password", element: <ForgotPassword /> },
-        { path: "reset-password", element: <ResetPassword /> },
-        { path: "verify", element: <Verify /> },
-        { path: "admin/login", element: <AdminLogin /> },
-      ],
-    },
-    {
-      path: "/",
-      element: (
-        <Suspense fallback={<SuspenseUi />}>
-          <MainLayout />
-        </Suspense>
-      ),
-      errorElement: <ErrorBoundary />,
-
-      children: [
-        {
-          index: true,
-          element: (
-            <Suspense fallback={<SuspenseUi />}>
-              <HomePage />
-            </Suspense>
-          ),
-        },
-        {
-          path: "profile",
-          element: (
-            <Suspense fallback={<SuspenseUi />}>
-              <Profile />
-            </Suspense>
-          ),
-        },
-        {
-          path: "settings",
-          element: (
-            <PrivateRoutes {...privateRouteProps}>
-              <Suspense fallback={<SuspenseUi />}>
-                <Settings />
-              </Suspense>
-            </PrivateRoutes>
-          ),
-        },
-        {
-          path: "jobs",
-          element: (
-            <Suspense fallback={<SuspenseUi />}>
-              <Jobs />
-            </Suspense>
-          ),
-        },
-        {
-          path: "jobs/:id",
-          element: (
-            <PrivateRoutes {...privateRouteProps}>
-              <Suspense fallback={<SuspenseUi />}>
-                <JobDetails />
-              </Suspense>
-            </PrivateRoutes>
-          ),
-        },
-        {
-          path: "auth/change-password",
-          element: (
-            <PrivateRoutes {...privateRouteProps}>
-              <Suspense fallback={<SuspenseUi />}>
-                <ChangePassword />
-              </Suspense>
-            </PrivateRoutes>
-          ),
-        },
-        {
-          path: "apply/:id",
-          element: (
-            <PrivateRoutes {...privateRouteProps}>
-              <Suspense fallback={<SuspenseUi />}>
-                <CandidateApplicationForm />
-              </Suspense>
-            </PrivateRoutes>
-          ),
-        },
-        {
-          path: "/about",
-          element: (
-            <Suspense fallback={<SuspenseUi />}>
-              <AboutUs />
-            </Suspense>
-          ),
-        },
-        {
-          path: "/contact",
-          element: (
-            <Suspense fallback={<SuspenseUi />}>
-              <ContactUs />
-            </Suspense>
-          ),
-        },
-        {
-          path: "/privacy-policy",
-          element: (
-            <Suspense fallback={<SuspenseUi />}>
-              <PrivacyPolicy />
-            </Suspense>
-          ),
-        },
-        {
-          path: "/terms-of-service",
-          element: (
-            <Suspense fallback={<SuspenseUi />}>
-              <TermsOfService />
-            </Suspense>
-          ),
-        },
-        {
-          path: "/my-applications",
-          element: (
-            <PrivateRoutes {...privateRouteProps}>
-              <Suspense fallback={<SuspenseUi />}>
-                <MyApplications />
-              </Suspense>
-            </PrivateRoutes>
-          ),
-        },
-        {
-          path: "/resume",
-          element: (
-            <PrivateRoutes {...privateRouteProps}>
-              <Suspense fallback={<SuspenseUi />}>
-                <MyResume />
-              </Suspense>
-            </PrivateRoutes>
-          ),
-        },
-        {
-          path: "/applications/:id/interview",
-          element: (
-            <PrivateRoutes {...privateRouteProps}>
-              <Suspense fallback={<SuspenseUi />}>
-                <ApplicationInterview />
-              </Suspense>
-            </PrivateRoutes>
-          ),
-        },
-        {
-          path: "/saved-jobs",
-          element: (
-            <PrivateRoutes {...privateRouteProps}>
-              <Suspense fallback={<SuspenseUi />}>
-                <SavedJobs />
-              </Suspense>
-            </PrivateRoutes>
-          ),
-        },
-      ],
-    },
-
-    {
-      path: "/admin",
-      element: (
-        <PrivateRoutes {...privateRouteProps}>
-          <Suspense fallback={<SuspenseUi />}>
-            <DashboardLayout />
-          </Suspense>
-        </PrivateRoutes>
-      ),
-      errorElement: <ErrorBoundary />,
-
-      children: [
-        {
-          index: true,
-          element: (
-            <Suspense fallback={<SuspenseUi />}>
-              <DashboardHome />
-            </Suspense>
-          ),
-        },
-        {
-          path: "jobs",
-          element: (
-            <Suspense fallback={<SuspenseUi />}>
-              <AdminJobs />
-            </Suspense>
-          ),
-        },
-        {
-          path: "jobs/:id",
-          element: (
-            <Suspense fallback={<SuspenseUi />}>
-              <AdminJobDetails />
-            </Suspense>
-          ),
-        },
-        {
-          path: "jobs/:jobId/applications",
-          element: (
-            <Suspense fallback={<SuspenseUi />}>
-              <AdminJobApplications />
-            </Suspense>
-          ),
-        },
-        {
-          path: "applications",
-          element: (
-            <Suspense fallback={<SuspenseUi />}>
-              <AdminApplications />
-            </Suspense>
-          ),
-        },
-        {
-          path: "settings",
-          element: (
-            <Suspense fallback={<SuspenseUi />}>
-              <AdminSettings />
-            </Suspense>
-          ),
-        },
-                {
-          path: "notifications",
-          element: (
-            <Suspense fallback={<SuspenseUi />}>
-              <AdminNotifications />
-            </Suspense>
-          ),
-        },
-      ],
-    },
-  ];
-  const router = createBrowserRouter(routes);
   return <RouterProvider router={router} />;
 }
