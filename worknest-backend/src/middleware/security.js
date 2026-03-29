@@ -6,23 +6,46 @@ const parseAllowedOrigins = (rawOrigins = "") =>
     .map((origin) => origin.trim())
     .filter(Boolean);
 
-export const buildCorsOptions = (allowedOrigins = []) => ({
-  origin(origin, callback) {
-    if (!origin) {
-      return callback(null, true);
-    }
+const normalizeOrigin = (origin) => {
+  try {
+    return new URL(origin).origin;
+  } catch {
+    return origin?.replace(/\/+$/, "") || "";
+  }
+};
 
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
+export const buildCorsOptions = (allowedOrigins = []) => {
+  const normalizedAllowlist = allowedOrigins.map(normalizeOrigin);
 
-    return callback(new ForbiddenError("CORS origin is not allowed"));
-  },
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-  optionsSuccessStatus: 200,
-  allowedHeaders: ["Content-Type", "Authorization", "X-Request-Id"],
-});
+  return {
+    origin(origin, callback) {
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      if (normalizedAllowlist.length === 0 && process.env.NODE_ENV !== "production") {
+        return callback(null, true);
+      }
+
+      const normalizedIncoming = normalizeOrigin(origin);
+      const isAllowed = normalizedAllowlist.some((allowed) => {
+        if (!allowed) return false;
+        if (allowed === "*") return true;
+        return normalizedIncoming === allowed;
+      });
+
+      if (isAllowed) {
+        return callback(null, true);
+      }
+
+      return callback(new ForbiddenError("CORS origin is not allowed"));
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    optionsSuccessStatus: 200,
+    allowedHeaders: ["Content-Type", "Authorization", "X-Request-Id", "X-Requested-With"],
+  };
+};
 
 export const enforceHttpsMiddleware = (req, res, next) => {
   if (process.env.NODE_ENV !== "production") {
@@ -39,4 +62,4 @@ export const enforceHttpsMiddleware = (req, res, next) => {
   return next(new ForbiddenError("HTTPS is required"));
 };
 
-export const allowedOrigins = parseAllowedOrigins(process.env.CLIENT_URL || "");
+export const allowedOrigins = parseAllowedOrigins(process.env.CLIENT_URL || process.env.ALLOWED_ORIGINS || "");
