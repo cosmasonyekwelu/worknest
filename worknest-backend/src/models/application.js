@@ -1,5 +1,101 @@
 import mongoose, { Schema, model } from "mongoose";
 import { APPLICATION_STATUSES, APPLICATION_STATUS_VALUES } from "../constants/applicationStatus.js";
+import {
+  APPLICATION_LIMITS,
+  isHttpUrl,
+} from "../constants/applicationConstraints.js";
+
+const urlValidator = {
+  validator: isHttpUrl,
+  message: "Must be a valid URL",
+};
+
+const answerSchema = new Schema(
+  {
+    question: {
+      type: String,
+      trim: true,
+      maxlength: APPLICATION_LIMITS.answerQuestionMaxLength,
+    },
+    answer: {
+      type: String,
+      trim: true,
+      maxlength: APPLICATION_LIMITS.answerTextMaxLength,
+    },
+  },
+  { _id: false },
+);
+
+const interviewQuestionSchema = new Schema(
+  {
+    question: {
+      type: String,
+      trim: true,
+      maxlength: APPLICATION_LIMITS.answerQuestionMaxLength,
+    },
+    answer: {
+      type: String,
+      trim: true,
+      maxlength: APPLICATION_LIMITS.answerTextMaxLength,
+      default: "",
+    },
+    score: { type: Number, min: 0, max: 100, default: null },
+  },
+  { _id: false },
+);
+
+const personalInfoSchema = new Schema(
+  {
+    firstname: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: APPLICATION_LIMITS.nameMaxLength,
+    },
+    lastname: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: APPLICATION_LIMITS.nameMaxLength,
+    },
+    email: {
+      type: String,
+      required: true,
+      trim: true,
+      lowercase: true,
+      maxlength: APPLICATION_LIMITS.emailMaxLength,
+      match: [/.+@.+\..+/, "Please provide a valid email address"],
+    },
+    phone: {
+      type: String,
+      trim: true,
+      maxlength: APPLICATION_LIMITS.phoneMaxLength,
+    },
+    currentLocation: {
+      type: String,
+      trim: true,
+      maxlength: APPLICATION_LIMITS.locationMaxLength,
+    },
+  },
+  { _id: false },
+);
+
+const statusHistorySchema = new Schema(
+  {
+    status: {
+      type: String,
+      enum: [...APPLICATION_STATUS_VALUES],
+    },
+    changedAt: { type: Date, default: Date.now },
+    changedBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    note: {
+      type: String,
+      trim: true,
+      maxlength: APPLICATION_LIMITS.internalNoteMaxLength,
+    },
+  },
+  { _id: false },
+);
 
 const applicationSchema = new Schema(
   {
@@ -18,43 +114,59 @@ const applicationSchema = new Schema(
     resumeUrl: {
       type: String,
       required: [true, "Resume is required"],
+      trim: true,
+      maxlength: APPLICATION_LIMITS.resumeUrlMaxLength,
+      validate: urlValidator,
     },
-    portfolioUrl: String,
-    linkedinUrl: String,
-    answers: [
-      {
-        question: String,
-        answer: String,
+    portfolioUrl: {
+      type: String,
+      trim: true,
+      maxlength: APPLICATION_LIMITS.urlMaxLength,
+      validate: urlValidator,
+    },
+    linkedinUrl: {
+      type: String,
+      trim: true,
+      maxlength: APPLICATION_LIMITS.urlMaxLength,
+      validate: urlValidator,
+    },
+    answers: {
+      type: [answerSchema],
+      default: [],
+      validate: {
+        validator: (value) =>
+          Array.isArray(value) &&
+          value.length <= APPLICATION_LIMITS.answersMaxItems,
+        message: `Answers cannot contain more than ${APPLICATION_LIMITS.answersMaxItems} items`,
       },
-    ],
+    },
 
     //NEW: Snapshot of applicant's personal info at submission time
-    personalInfo: {
-      firstname: { type: String, required: true },
-      lastname: { type: String, required: true },
-      email: { type: String, required: true },
-      phone: String,
-      currentLocation: String, // field name without space
-    },
+    personalInfo: personalInfoSchema,
     applicantName: {
       type: String,
       trim: true,
+      maxlength: APPLICATION_LIMITS.applicantNameMaxLength,
       index: true,
     },
     applicantEmail: {
       type: String,
       trim: true,
       lowercase: true,
+      maxlength: APPLICATION_LIMITS.emailMaxLength,
+      match: [/.+@.+\..+/, "Please provide a valid email address"],
       index: true,
     },
     jobTitle: {
       type: String,
       trim: true,
+      maxlength: APPLICATION_LIMITS.shortTextMaxLength,
       index: true,
     },
     companyName: {
       type: String,
       trim: true,
+      maxlength: APPLICATION_LIMITS.shortTextMaxLength,
       index: true,
     },
 
@@ -67,14 +179,18 @@ const applicationSchema = new Schema(
     ai_feedback: {
       type: String,
       default: "",
+      maxlength: APPLICATION_LIMITS.aiFeedbackMaxLength,
     },
-    interview_questions: [
-      {
-        question: String,
-        answer: { type: String, default: "" },
-        score: { type: Number, min: 0, max: 100, default: null },
+    interview_questions: {
+      type: [interviewQuestionSchema],
+      default: [],
+      validate: {
+        validator: (value) =>
+          Array.isArray(value) &&
+          value.length <= APPLICATION_LIMITS.answersMaxItems,
+        message: `Interview questions cannot contain more than ${APPLICATION_LIMITS.answersMaxItems} items`,
       },
-    ],
+    },
     interview_score: {
       type: Number,
       min: 0,
@@ -95,16 +211,14 @@ const applicationSchema = new Schema(
     },
     internalNote: {
       type: String,
+      trim: true,
+      maxlength: APPLICATION_LIMITS.internalNoteMaxLength,
       select: false,
     },
-    statusHistory: [
-      {
-        status: String,
-        changedAt: { type: Date, default: Date.now },
-        changedBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
-        note: String,
-      },
-    ],
+    statusHistory: {
+      type: [statusHistorySchema],
+      default: [],
+    },
   },
   { timestamps: true }
 );

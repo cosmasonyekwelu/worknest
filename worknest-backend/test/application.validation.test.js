@@ -35,3 +35,40 @@ test("application counts query accepts multiple job ids", () => {
     "507f1f77bcf86cd799439012",
   ]);
 });
+
+test("application create validation rejects invalid external profile URLs", () => {
+  assert.throws(
+    () =>
+      applicationValidation.create.parse({
+        portfolioUrl: "notaurl",
+        linkedinUrl: "https://www.linkedin.com/in/example",
+        answers: JSON.stringify([]),
+        personalInfo: JSON.stringify({
+          firstname: "Ada",
+          lastname: "Lovelace",
+          email: "ada@example.com",
+        }),
+      }),
+    /Must be a valid URL/,
+  );
+});
+
+test("application create validation rejects oversized answer text", () => {
+  assert.throws(
+    () =>
+      applicationValidation.create.parse({
+        answers: JSON.stringify([
+          {
+            question: "Why do you want this role?",
+            answer: "a".repeat(4001),
+          },
+        ]),
+        personalInfo: JSON.stringify({
+          firstname: "Ada",
+          lastname: "Lovelace",
+          email: "ada@example.com",
+        }),
+      }),
+    /Too big|at most 4000/,
+  );
+});

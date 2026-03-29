@@ -3,6 +3,7 @@ import { searchJobService, uploadJobAvatar } from "../services/job.service.js";
 import { deleteFromCloudinary, uploadToCloudinary } from "../lib/cloudinary.js";
 import tryCatchFn from "../lib/tryCatchFn.js";
 import responseHandler from "../lib/responseHandler.js";
+import logger from "../config/logger.js";
 import Jobs from "../models/jobs.js";
 import User from "../models/user.js";
 import Application from "../models/application.js";
@@ -10,6 +11,8 @@ import Notification from "../models/notification.js";
 import { jobValidation } from "../validation/job.validation.js";
 import { ConflictError, NotFoundError, ValidationError } from "../lib/errors.js";
 import { ZodError } from "zod";
+import { buildValidationError } from "../lib/validation.js";
+import { withMongoTransaction } from "../lib/transaction.js";
 
 const { successResponse } = responseHandler;
 const logLegacyCompanyLogoWarning = () => {
@@ -39,10 +42,7 @@ const ensureValid = (schema, payload) => {
     return schema.parse(payload);
   } catch (error) {
     if (error instanceof ZodError) {
-      throw new ValidationError(
-        "Validation failed",
-        error.issues.map((i) => ({ message: i.message, path: i.path.join(".") })),
-      );
+      throw buildValidationError("Validation failed", error.issues);
     }
     throw error;
   }
@@ -185,40 +185,78 @@ const updateJob = tryCatchFn(async (req, res) => {
 
   const updates = Object.fromEntries(Object.entries(validatedBody).filter(([key]) => allowed.includes(key)));
 
-  const job = await Jobs.findByIdAndUpdate(id, updates, {
-    new: true,
-    runValidators: true,
-  });
+  let uploadedAvatar = null;
+  let previousAvatarId = "";
+  let transactionCommitted = false;
 
-  if (!job) {
-    throw new NotFoundError("Job not found");
-  }
+  try {
+    if (req.file) {
+      const avatarPayload = `data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`;
+      uploadedAvatar = await uploadToCloudinary(avatarPayload, {
+        folder: "Worknest/job-avatars",
+        width: 50,
+        height: 50,
+        crop: "fit",
+        format: "webp",
+      });
+    }
 
-  if (req.file) {
-    const avatarPayload = `data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`;
-    const uploaded = await uploadToCloudinary(avatarPayload, {
-      folder: "Worknest/job-avatars",
-      width: 50,
-      height: 50,
-      crop: "fit",
-      format: "webp",
+    const job = await withMongoTransaction(async (session) => {
+      const existingJob = await Jobs.findById(id, null, { session });
+
+      if (!existingJob) {
+        throw new NotFoundError("Job not found");
+      }
+
+      Object.assign(existingJob, updates);
+
+      if (uploadedAvatar) {
+        previousAvatarId = existingJob.avatarId || "";
+        existingJob.avatar = uploadedAvatar.url;
+        existingJob.avatarId = uploadedAvatar.public_id;
+      }
+
+      await existingJob.save({ session });
+
+      await Application.updateMany(
+        { job: existingJob._id },
+        {
+          jobTitle: existingJob.title,
+          companyName: existingJob.companyName,
+        },
+        { session },
+      );
+
+      return existingJob;
     });
-    if (job.avatarId) await deleteFromCloudinary(job.avatarId).catch(() => null);
-    job.avatar = uploaded.url;
-    job.avatarId = uploaded.public_id;
-    await job.save();
+
+    transactionCommitted = true;
+
+    if (uploadedAvatar && previousAvatarId) {
+      await deleteFromCloudinary(previousAvatarId).catch((error) => {
+        logger.warn("Previous job avatar cleanup failed", {
+          jobId: id,
+          avatarId: previousAvatarId,
+          error: error?.message || String(error),
+        });
+      });
+    }
+
+    logLegacyCompanyLogoWarning();
+    return successResponse(res, serializeJob(job), "Job updated successfully", 200);
+  } catch (error) {
+    if (!transactionCommitted && uploadedAvatar?.public_id) {
+      await deleteFromCloudinary(uploadedAvatar.public_id).catch((cleanupError) => {
+        logger.warn("Uploaded job avatar rollback cleanup failed", {
+          jobId: id,
+          avatarId: uploadedAvatar.public_id,
+          error: cleanupError?.message || String(cleanupError),
+        });
+      });
+    }
+
+    throw error;
   }
-
-  await Application.updateMany(
-    { job: job._id },
-    {
-      jobTitle: job.title,
-      companyName: job.companyName,
-    },
-  );
-
-  logLegacyCompanyLogoWarning();
-  return successResponse(res, serializeJob(job), "Job updated successfully", 200);
 });
 
 const deleteJob = tryCatchFn(async (req, res) => {
@@ -229,28 +267,47 @@ const deleteJob = tryCatchFn(async (req, res) => {
     throw new ValidationError("Invalid job id");
   }
 
-  const job = await Jobs.findById(id);
+  let avatarIdToDelete = "";
 
-  if (!job) {
-    throw new NotFoundError("Job not found");
-  }
+  await withMongoTransaction(async (session) => {
+    const job = await Jobs.findById(id, null, { session });
 
-  const applicationCount = await Application.countDocuments({ job: id });
-  if (applicationCount > 0) {
-    throw new ConflictError(
-      "Cannot delete a job that already has applications. Close the job instead.",
+    if (!job) {
+      throw new NotFoundError("Job not found");
+    }
+
+    const existingApplication = await Application.findOne(
+      { job: id },
+      "_id",
+      { session },
+    ).lean();
+
+    if (existingApplication) {
+      throw new ConflictError(
+        "Cannot delete a job that already has applications. Close the job instead.",
+      );
+    }
+
+    avatarIdToDelete = job.avatarId || "";
+
+    await User.updateMany(
+      { savedJobs: id },
+      { $pull: { savedJobs: id } },
+      { session },
     );
-  }
+    await Notification.deleteMany({ "data.jobId": id }, { session });
+    await Jobs.deleteOne({ _id: id }, { session });
+  });
 
-  if (job.avatarId) {
-    await deleteFromCloudinary(job.avatarId).catch(() => null);
+  if (avatarIdToDelete) {
+    await deleteFromCloudinary(avatarIdToDelete).catch((error) => {
+      logger.warn("Job avatar cleanup failed after deletion", {
+        jobId: id,
+        avatarId: avatarIdToDelete,
+        error: error?.message || String(error),
+      });
+    });
   }
-
-  await Promise.all([
-    User.updateMany({ savedJobs: id }, { $pull: { savedJobs: id } }),
-    Notification.deleteMany({ "data.jobId": id }),
-    job.deleteOne(),
-  ]);
 
   return successResponse(res, null, "Job deleted successfully", 200);
 });

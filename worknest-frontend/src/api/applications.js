@@ -145,6 +145,32 @@ const normalizeAssetUrl = (value) => {
   return "";
 };
 
+const safeParseJson = (value, fallbackValue, expectedType) => {
+  if (typeof value !== "string") {
+    return fallbackValue;
+  }
+
+  try {
+    const parsedValue = JSON.parse(value);
+
+    if (expectedType === "array") {
+      return Array.isArray(parsedValue) ? parsedValue : fallbackValue;
+    }
+
+    if (expectedType === "object") {
+      return parsedValue &&
+        typeof parsedValue === "object" &&
+        !Array.isArray(parsedValue)
+        ? parsedValue
+        : fallbackValue;
+    }
+
+    return parsedValue;
+  } catch {
+    return fallbackValue;
+  }
+};
+
 export const normalizeApplication = (app) => {
   if (!app) return null;
 
@@ -156,11 +182,7 @@ export const normalizeApplication = (app) => {
 
   let personalInfo = app.personalInfo || {};
   if (typeof personalInfo === "string") {
-    try {
-      personalInfo = JSON.parse(personalInfo);
-    } catch {
-      personalInfo = {};
-    }
+    personalInfo = safeParseJson(personalInfo, {}, "object");
   }
 
   const firstName = personalInfo.firstname || "";
@@ -179,7 +201,7 @@ export const normalizeApplication = (app) => {
     linkedinUrl: app.linkedinUrl,
     answers: Array.isArray(app.answers)
       ? app.answers
-      : JSON.parse(app.answers || "[]"),
+      : safeParseJson(app.answers, [], "array"),
     interviewQuestions: Array.isArray(app.interview_questions)
       ? app.interview_questions
       : [],

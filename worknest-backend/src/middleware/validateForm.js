@@ -1,23 +1,15 @@
 import { ZodError } from "zod";
+import { buildValidationError } from "../lib/validation.js";
 
 export const validateFormData = (schema) => (req, res, next) => {
   try {
     const parsedData = schema.parse(req.body);
     req.body = parsedData;
-    next();
+    return next();
   } catch (error) {
     if (error instanceof ZodError) {
-      const errorMessages = error.issues.map((issue) => ({
-        message: `${issue.path.join(".")} is ${issue.message}`,
-        path: issue.path.join("."),
-      }));
-      return res.status(400).json({
-        success: false,
-        status: "fail",
-        message: "Validation failed",
-        errors: errorMessages,
-      });
+      return next(buildValidationError("Validation failed", error.issues));
     }
-    next(error);
+    return next(error);
   }
 };

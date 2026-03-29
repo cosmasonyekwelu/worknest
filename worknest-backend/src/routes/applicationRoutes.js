@@ -18,6 +18,7 @@ import {
   verifyAuth,
 } from "../middleware/authenticate.js";
 import { validateRequest } from "../middleware/validateRequest.js";
+import { validateFormData } from "../middleware/validateForm.js";
 import { applicationValidation } from "../validation/application.validation.js";
 import upload, { validateUploadedResume } from "../middleware/upload.js";
 import { applyJobLimiter } from "../middleware/rateLimit.js";
@@ -33,6 +34,7 @@ router.post(
   applyJobLimiter,
   upload.single("resume"),
   validateUploadedResume,
+  validateFormData(applicationValidation.create),
   applyForJob,
 );
 

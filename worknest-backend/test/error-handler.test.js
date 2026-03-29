@@ -81,3 +81,27 @@ test('globalErrorHandler logs 5xx errors with stack traces', () => {
   assert.equal(typeof errorLogs.at(-1).meta.stack, 'string');
   assert.ok(errorLogs.at(-1).meta.stack.length > 0);
 });
+
+test('globalErrorHandler normalizes mongoose validation details into the shared error shape', () => {
+  const res = createMockRes();
+
+  globalErrorHandler(
+    {
+      name: 'ValidationError',
+      message: 'Application validation failed',
+      errors: {
+        linkedinUrl: { message: 'Must be a valid URL', path: 'linkedinUrl' },
+        personalInfo: { message: 'Path `personalInfo.email` is required.', path: 'personalInfo.email' },
+      },
+    },
+    { method: 'POST', originalUrl: '/api/v1/applications' },
+    res,
+    () => {},
+  );
+
+  assert.equal(res.statusCode, 400);
+  assert.deepEqual(res.payload.errors, [
+    { message: 'Must be a valid URL', path: 'linkedinUrl' },
+    { message: 'Path `personalInfo.email` is required.', path: 'personalInfo.email' },
+  ]);
+});

@@ -1,5 +1,6 @@
 import { AppError } from "../lib/errors.js";
 import logger from "../config/logger.js";
+import { formatMongooseValidationError } from "../lib/validation.js";
 
 const sendError = (err, res) => {
   const statusCode = err.statusCode || 500;
@@ -29,7 +30,11 @@ export const globalErrorHandler = (err, req, res, next) => {
     } else if (normalizedError.name === "TokenExpiredError") {
       normalizedError = new AppError("Your token has expired. Please login again", 401);
     } else if (normalizedError.name === "ValidationError") {
-      normalizedError = new AppError(normalizedError.message, 400);
+      normalizedError = new AppError(
+        normalizedError.message || "Validation failed",
+        400,
+        formatMongooseValidationError(normalizedError),
+      );
     } else if (normalizedError.name === "CastError") {
       normalizedError = new AppError("Invalid resource identifier", 400);
     } else if (normalizedError.code === 11000) {

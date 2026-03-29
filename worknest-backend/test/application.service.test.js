@@ -5,7 +5,10 @@ import {
   getApplicationById,
   getApplicationCountsByJobIds,
   getAllApplications,
+  updateApplicationStatus,
 } from "../src/services/application.service.js";
+import { ValidationError } from "../src/lib/errors.js";
+import { APPLICATION_STATUSES } from "../src/constants/applicationStatus.js";
 
 test("getApplicationById populates the singular requirement field and maps companyLogo", async () => {
   const originalFindById = Application.findById;
@@ -113,5 +116,69 @@ test("getAllApplications returns at least one total page for empty result sets",
   } finally {
     Application.find = originalFind;
     Application.countDocuments = originalCountDocuments;
+  }
+});
+
+test("updateApplicationStatus rejects invalid status transitions", async () => {
+  const originalFindById = Application.findById;
+
+  Application.findById = async () => ({
+    status: APPLICATION_STATUSES.REJECTED,
+    statusHistory: [],
+    save: async () => {},
+  });
+
+  try {
+    await assert.rejects(
+      () =>
+        updateApplicationStatus(
+          "507f1f77bcf86cd799439033",
+          APPLICATION_STATUSES.SUBMITTED,
+          "507f1f77bcf86cd799439034",
+        ),
+      (error) => {
+        assert.ok(error instanceof ValidationError);
+        assert.match(
+          error.message,
+          /Cannot change application status from "rejected" to "submitted"/,
+        );
+        return true;
+      },
+    );
+  } finally {
+    Application.findById = originalFindById;
+  }
+});
+
+test("updateApplicationStatus allows valid forward transitions", async () => {
+  const originalFindById = Application.findById;
+  let saved = false;
+
+  const applicationDoc = {
+    status: APPLICATION_STATUSES.SUBMITTED,
+    statusHistory: [],
+    async save() {
+      saved = true;
+      return this;
+    },
+  };
+
+  Application.findById = async () => applicationDoc;
+
+  try {
+    const result = await updateApplicationStatus(
+      "507f1f77bcf86cd799439035",
+      APPLICATION_STATUSES.IN_REVIEW,
+      "507f1f77bcf86cd799439036",
+      "Moved into review",
+    );
+
+    assert.equal(saved, true);
+    assert.equal(result.status, APPLICATION_STATUSES.IN_REVIEW);
+    assert.equal(result.statusHistory.length, 1);
+    assert.equal(result.statusHistory[0].status, APPLICATION_STATUSES.IN_REVIEW);
+    assert.equal(result.statusHistory[0].note, "Moved into review");
+  } finally {
+    Application.findById = originalFindById;
   }
 });

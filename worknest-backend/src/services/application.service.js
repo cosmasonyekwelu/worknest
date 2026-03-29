@@ -7,6 +7,7 @@ import logger from "../config/logger.js";
 import { generateInterviewQuestions, reviewApplication, scoreInterviewAnswers } from "./ai.service.js";
 import {
   APPLICATION_STATUSES,
+  canTransitionApplicationStatus,
   APPLICATION_STATUS_VALUES,
 } from "../constants/applicationStatus.js";
 
@@ -400,6 +401,12 @@ export const updateApplicationStatus = async (applicationId, status, adminId, no
 
   if (application.status === status) {
     throw new ValidationError(`Application is already in "${status}" status`);
+  }
+
+  if (!canTransitionApplicationStatus(application.status, status)) {
+    throw new ValidationError(
+      `Cannot change application status from "${application.status}" to "${status}"`,
+    );
   }
 
   application.statusHistory.push({

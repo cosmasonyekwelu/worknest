@@ -1,5 +1,5 @@
-import { ValidationError } from "../lib/errors.js";
 import { ZodError } from "zod";
+import { buildValidationError } from "../lib/validation.js";
 
 export const validateRequest = (schema, property = "body") => {
   return (req, res, next) => {
@@ -26,11 +26,7 @@ export const validateRequest = (schema, property = "body") => {
       return next();
     } catch (error) {
       if (error instanceof ZodError) {
-        const details = error.issues.map((issue) => ({
-          message: issue.message,
-          path: issue.path.join("."),
-        }));
-        return next(new ValidationError("Validation failed", details));
+        return next(buildValidationError("Validation failed", error.issues));
       }
       return next(error);
     }

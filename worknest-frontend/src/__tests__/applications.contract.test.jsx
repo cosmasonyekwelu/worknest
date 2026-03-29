@@ -5,6 +5,7 @@ import {
   getApplicationById,
   getAllApplications,
   getMyApplications,
+  normalizeApplication,
 } from "@/api/applications";
 
 describe("applications API contracts", () => {
@@ -175,5 +176,22 @@ describe("applications API contracts", () => {
 
     expect(result.job.requirement).toEqual(["React"]);
     expect(result.job.companyLogo).toBe("https://cdn.example.com/logo.webp");
+  });
+
+  it("normalizes malformed answers payloads without crashing", () => {
+    const result = normalizeApplication({
+      _id: "application-2",
+      answers: "{not-json",
+      personalInfo: "{\"firstname\":\"Ada\"}",
+      job: {
+        _id: "job-2",
+        title: "Backend Engineer",
+        companyName: "WorkNest",
+      },
+    });
+
+    expect(result.answers).toEqual([]);
+    expect(result.personalInfo).toEqual({ firstname: "Ada" });
+    expect(result.applicant.name).toBe("Ada");
   });
 });

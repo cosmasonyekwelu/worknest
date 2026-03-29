@@ -19,7 +19,11 @@ import {
   useTriggerAIReview,
   useUpdateApplicationPersonalInfo,
 } from "@/hooks/useApplications";
-import { statusConfig, getStatusStyles } from "@/utils/constant";
+import {
+  getAllowedApplicationStatusOptions,
+  getStatusStyles,
+  statusConfig,
+} from "@/utils/constant";
 import Avatar from "@/components/Avatar"; // ✅ Import Avatar for company logo fallback
 import { toast } from "sonner";
 
@@ -124,6 +128,10 @@ export default function ApplicationDetail({ applicationId, onBack }) {
       personalInfo: personalInfoForm,
     });
   };
+
+  const availableStatusOptions = getAllowedApplicationStatusOptions(
+    application?.status,
+  );
 
   const handleTriggerAIReview = () => {
     if (!hasRequiredPersonalInfo) {
@@ -335,15 +343,21 @@ export default function ApplicationDetail({ applicationId, onBack }) {
                   </button>
                   {showStatusDropdown && (
                     <div className="absolute z-50 w-full mt-3 bg-white border border-gray-100 rounded-2xl shadow-xl shadow-gray-200/50 overflow-hidden py-2 animate-in fade-in slide-in-from-top-2 duration-200">
-                      {statusConfig.map((statusItem) => (
-                        <button
-                          key={statusItem.value}
-                          onClick={() => handleStatusSelect(statusItem.value)}
-                          className="w-full text-left px-5 py-3.5 hover:bg-orange-50 hover:text-[#F57450] font-bold transition-colors text-sm text-gray-600"
-                        >
-                          {statusItem.label}
-                        </button>
-                      ))}
+                      {availableStatusOptions.length > 0 ? (
+                        availableStatusOptions.map((statusItem) => (
+                          <button
+                            key={statusItem.value}
+                            onClick={() => handleStatusSelect(statusItem.value)}
+                            className="w-full text-left px-5 py-3.5 hover:bg-orange-50 hover:text-[#F57450] font-bold transition-colors text-sm text-gray-600"
+                          >
+                            {statusItem.label}
+                          </button>
+                        ))
+                      ) : (
+                        <p className="px-5 py-3 text-sm font-medium text-gray-400">
+                          No further status changes available
+                        </p>
+                      )}
                     </div>
                   )}
                 </div>

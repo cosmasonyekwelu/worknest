@@ -50,33 +50,6 @@ export const applyForJob = tryCatchFn(async (req, res) => {
 
   const { portfolioUrl, linkedinUrl, answers, personalInfo } = req.body;
 
-  let parsedAnswers = answers;
-  if (typeof answers === "string") {
-    try {
-      parsedAnswers = JSON.parse(answers);
-    } catch {
-      throw new ValidationError("Invalid answers format. Must be a valid JSON array.");
-    }
-  }
-
-  if (!personalInfo) {
-    throw new ValidationError("Personal information is required");
-  }
-
-  let parsedPersonalInfo;
-  try {
-    parsedPersonalInfo = typeof personalInfo === "string" ? JSON.parse(personalInfo) : personalInfo;
-    const required = ["firstname", "lastname", "email"];
-    for (const field of required) {
-      if (!parsedPersonalInfo[field]?.trim()) {
-        throw new ValidationError(`${field} is required`);
-      }
-    }
-  } catch (error) {
-    if (error instanceof ValidationError) throw error;
-    throw new ValidationError("Invalid personalInfo format or missing required fields");
-  }
-
   const job = await Jobs.findById(jobId).select("title companyName");
   if (!job) {
     throw new NotFoundError("Job not found");
@@ -89,10 +62,10 @@ export const applyForJob = tryCatchFn(async (req, res) => {
       jobId,
       {
         resumeUrl: uploadResult.url,
-        portfolioUrl: portfolioUrl?.trim(),
-        linkedinUrl: linkedinUrl?.trim(),
-        answers: parsedAnswers,
-        personalInfo: parsedPersonalInfo,
+        portfolioUrl,
+        linkedinUrl,
+        answers,
+        personalInfo,
       }
     );
   } catch (error) {

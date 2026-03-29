@@ -4,13 +4,32 @@ import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import { uploadToCloudinary, deleteFromCloudinary } from "../lib/cloudinary.js";
 import logger from "../config/logger.js";
-import { AppError, NotFoundError, ValidationError, ConflictError } from "../lib/errors.js";
+import {
+  NotFoundError,
+  ValidationError,
+  ConflictError,
+  ForbiddenError,
+} from "../lib/errors.js";
 import Application from "../models/application.js";
 import Resume from "../models/resume.js";
 import Notification from "../models/notification.js";
+import { withMongoTransaction } from "../lib/transaction.js";
 
 const PASSWORD_RESET_MAX_ATTEMPTS = 5;
 const PASSWORD_RESET_LOCK_WINDOW_MS = 15 * 60 * 1000;
+
+const deleteCloudinaryAssetSafely = async (publicId, options = {}) => {
+  if (!publicId) {
+    return;
+  }
+
+  await deleteFromCloudinary(publicId, options).catch((error) => {
+    logger.warn("Cloudinary asset cleanup failed", {
+      publicId,
+      error: error?.message || String(error),
+    });
+  });
+};
 
 const userService = {
   forgotPassword: async (req) => {
@@ -182,60 +201,79 @@ const userService = {
   },
   // update user
   updateUser: async (userId, userData) => {
-    const user = await User.findById(userId);
-    if (!user) {
-      throw new NotFoundError("No user found with that ID");
-    }
-
-    // Email uniqueness check
-    if (userData.email) {
-      const emailExists = await User.findOne({
-        email: userData.email.toLowerCase(),
-        _id: { $ne: userId },
-      });
-      if (emailExists) {
-        throw new ConflictError("User with email already exists");
+    return withMongoTransaction(async (session) => {
+      const user = await User.findOne({ _id: userId }, null, { session });
+      if (!user) {
+        throw new NotFoundError("No user found with that ID");
       }
-      user.email = userData.email.toLowerCase().trim();
-    }
 
-    // Phone uniqueness check
-    if (userData.phone) {
-      const phoneExists = await User.findOne({
-        phone: userData.phone,
-        _id: { $ne: userId },
-      });
-      if (phoneExists) {
-        throw new ConflictError("User with phone already exists");
+      if (userData.email) {
+        const normalizedEmail = userData.email.toLowerCase().trim();
+        const emailExists = await User.findOne(
+          {
+            email: normalizedEmail,
+            _id: { $ne: userId },
+          },
+          "_id",
+          { session },
+        );
+
+        if (emailExists) {
+          throw new ConflictError("User with email already exists");
+        }
+
+        user.email = normalizedEmail;
       }
-      user.phone = userData.phone.trim();
-    }
 
-    // Allowed profile updates
-    const allowedUpdates = [
-      "fullname",
-      "dateOfBirth",
-      "bio",
-      "country",
-      "language",
-      "preferredCurrency",
-    ];
+      if (userData.phone) {
+        const normalizedPhone = userData.phone.trim();
+        const phoneExists = await User.findOne(
+          {
+            phone: normalizedPhone,
+            _id: { $ne: userId },
+          },
+          "_id",
+          { session },
+        );
 
-    for (const key of allowedUpdates) {
-      if (userData[key] !== undefined && userData[key] !== null) {
-        user[key] =
-          typeof userData[key] === "string" ? userData[key].trim() : userData[key];
+        if (phoneExists) {
+          throw new ConflictError("User with phone already exists");
+        }
+
+        user.phone = normalizedPhone;
       }
-    }
-    const updatedUser = await user.save();
-    await Application.updateMany(
-      { applicant: userId },
-      {
-        applicantName: updatedUser.fullname,
-        applicantEmail: updatedUser.email,
-      },
-    );
-    return updatedUser;
+
+      const allowedUpdates = [
+        "fullname",
+        "dateOfBirth",
+        "bio",
+        "country",
+        "language",
+        "preferredCurrency",
+      ];
+
+      for (const key of allowedUpdates) {
+        if (userData[key] !== undefined && userData[key] !== null) {
+          user[key] =
+            typeof userData[key] === "string"
+              ? userData[key].trim()
+              : userData[key];
+        }
+      }
+
+      const updatedUser = await user.save({ session });
+
+      await Application.updateMany(
+        { applicant: userId },
+        {
+          applicantName: updatedUser.fullname,
+          applicantEmail: updatedUser.email,
+        },
+        { session },
+      );
+
+      return updatedUser;
+    });
   },
   updateNotificationSettings: async (userId, settingsData) => {
     const user = await User.findById(userId);
@@ -284,48 +322,72 @@ const userService = {
 
   // delete user account
   deleteAccount: async (userId) => {
-    const user = await User.findById(userId);
-    if (!user) {
-      throw new NotFoundError("Account not found");
-    }
+    let avatarId = "";
+    let resumePublicId = "";
 
-    const [resume, applications] = await Promise.all([
-      Resume.findOne({ user: userId }),
-      Application.find({ applicant: userId }).select("_id"),
-    ]);
+    await withMongoTransaction(async (session) => {
+      const user = await User.findOne(
+        { _id: userId },
+        "role avatarId",
+        { session },
+      );
 
-    if (user.avatarId) {
-      await deleteFromCloudinary(user.avatarId).catch(() => null);
-    }
+      if (!user) {
+        throw new NotFoundError("Account not found");
+      }
 
-    if (resume?.originalFile?.publicId) {
-      await deleteFromCloudinary(resume.originalFile.publicId, {
-        resource_type: "raw",
-        type: "authenticated",
-      }).catch(() => null);
-    }
+      if (user.role === "admin") {
+        const adminAccounts = await User.find(
+          { role: "admin" },
+          "_id",
+          { session },
+        );
 
-    const applicationIds = applications.map((application) => application._id);
+        if (adminAccounts.length <= 1) {
+          throw new ForbiddenError(
+            "At least one admin account must remain active",
+          );
+        }
+      }
 
-    await Promise.all([
-      User.findByIdAndUpdate(userId, {
-        refreshTokenHash: undefined,
-        refreshTokenExpiresAt: undefined,
-        $inc: { tokenVersion: 1 },
-      }),
-      Resume.deleteOne({ user: userId }),
-      Application.deleteMany({ applicant: userId }),
-      Notification.deleteMany({
+      const [resume, applications] = await Promise.all([
+        Resume.findOne(
+          { user: userId },
+          "originalFile.publicId",
+          { session },
+        ).lean(),
+        Application.find(
+          { applicant: userId },
+          "_id",
+          { session },
+        ).lean(),
+      ]);
+
+      avatarId = user.avatarId || "";
+      resumePublicId = resume?.originalFile?.publicId || "";
+
+      const applicationIds = applications.map((application) => application._id);
+      const notificationFilter = {
         $or: [
           { recipient: userId },
           ...(applicationIds.length
             ? [{ "data.applicationId": { $in: applicationIds } }]
             : []),
         ],
-      }),
-    ]);
+      };
 
-    await User.findByIdAndDelete(userId);
+      await Notification.deleteMany(notificationFilter, { session });
+      await Application.deleteMany({ applicant: userId }, { session });
+      await Resume.deleteOne({ user: userId }, { session });
+      await User.deleteOne({ _id: userId }, { session });
+    });
+
+    await deleteCloudinaryAssetSafely(avatarId);
+    await deleteCloudinaryAssetSafely(resumePublicId, {
+      resource_type: "raw",
+      type: "authenticated",
+    });
+
     return true;
   },
 };

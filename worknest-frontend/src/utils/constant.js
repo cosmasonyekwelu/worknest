@@ -1,6 +1,7 @@
 import dayjs from "dayjs";
 import {
   APPLICATION_STATUS_OPTIONS,
+  APPLICATION_STATUS_TRANSITIONS,
   APPLICATION_STATUS_VALUES,
 } from "@/constants/applicationStatus";
 
@@ -44,6 +45,13 @@ export const normalizeApplicationStatus = (statusValue = "") => {
   );
 
   return matchedStatus?.value || "";
+};
+
+export const getAllowedApplicationStatusOptions = (currentStatus = "") => {
+  const normalizedStatus = normalizeApplicationStatus(currentStatus);
+  const allowedValues = APPLICATION_STATUS_TRANSITIONS[normalizedStatus] || [];
+
+  return statusConfig.filter((status) => allowedValues.includes(status.value));
 };
 
 // export const getStatusColor = (statusValue) => {

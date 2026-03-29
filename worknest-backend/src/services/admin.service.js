@@ -1,8 +1,6 @@
 import User from "../models/user.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import crypto from "crypto";
-import { deleteFromCloudinary } from "../lib/cloudinary.js";
 import { getJwtSecrets } from "../config/env.js";
 import { NotFoundError, UnauthorizedError, ForbiddenError } from "../lib/errors.js";
 import {
@@ -15,6 +13,7 @@ import {
   clearRefreshTokenCookie,
   LEGACY_ADMIN_REFRESH_COOKIE_PATH,
 } from "../lib/token.js";
+import userService from "./user.service.js";
 
 export const buildUserSearchQuery = (query = "", role = "") => {
   const searchQuery = {};
@@ -177,15 +176,7 @@ const adminService = {
     return true;
   },
   deleteAccountAdmins: async (userId) => {
-    const user = await User.findById(userId);
-    if (!user) {
-      throw new NotFoundError("Account not found");
-    }
-    if (user.avatarId) {
-      await deleteFromCloudinary(user.avatarId);
-    }
-    await user.deleteOne();
-    return true;
+    return userService.deleteAccount(userId);
   },
 };
 
