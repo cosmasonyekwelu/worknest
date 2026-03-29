@@ -20,8 +20,9 @@ export const tailorResumeForJob = async ({ jobId, accessToken }) => {
   return axiosInstance.post(`/resume/tailor/${jobId}`, {}, headers(accessToken));
 };
 
-export const downloadTailoredResume = async ({ jobId, accessToken }) => {
+export const downloadTailoredResume = async ({ jobId, format = "pdf", accessToken }) => {
   return axiosInstance.get(`/resume/tailor/${jobId}/download`, {
+    params: { format },
     ...headers(accessToken),
     responseType: "blob",
   });

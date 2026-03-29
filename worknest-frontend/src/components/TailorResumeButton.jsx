@@ -64,12 +64,29 @@ export default function TailorResumeButton({ jobId, jobTitle = "", variant = "pr
 
   const handleDownload = async () => {
     try {
-      const res = await downloadMutation.mutateAsync({ jobId });
+      const res = await downloadMutation.mutateAsync({ jobId, format: "pdf" });
       const blob = res?.data || res;
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
       link.download = `tailored-${jobTitle || "resume"}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      // handled by hook
+    }
+  };
+
+  const handleDownloadDocx = async () => {
+    try {
+      const res = await downloadMutation.mutateAsync({ jobId, format: "docx" });
+      const blob = res?.data || res;
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `tailored-${jobTitle || "resume"}.docx`;
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -121,15 +138,26 @@ export default function TailorResumeButton({ jobId, jobTitle = "", variant = "pr
               <Clipboard className="h-4 w-4" />
               Copy text
             </button>
-            <button
-              type="button"
-              onClick={handleDownload}
-              disabled={downloadMutation.isPending}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-orange-500 text-white hover:bg-orange-600"
-            >
-              {downloadMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-              Download PDF
-            </button>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={handleDownload}
+                disabled={downloadMutation.isPending}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-orange-500 text-white hover:bg-orange-600"
+              >
+                {downloadMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                Download PDF
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDownloadDocx()}
+                disabled={downloadMutation.isPending}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 text-gray-800 hover:bg-gray-100"
+              >
+                {downloadMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                Download DOCX
+              </button>
+            </div>
           </div>
         </div>
       </Modal>

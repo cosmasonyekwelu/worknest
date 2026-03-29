@@ -66,7 +66,7 @@ export function useDownloadTailoredResume() {
   const { accessToken } = useAuth();
 
   return useMutation({
-    mutationFn: ({ jobId }) => downloadTailoredResume({ jobId, accessToken }),
+    mutationFn: ({ jobId, format }) => downloadTailoredResume({ jobId, format, accessToken }),
     onError: (error) => {
       const message = error?.response?.data?.message || "Download failed";
       toast.error(message);
