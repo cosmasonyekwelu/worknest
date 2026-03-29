@@ -1,4 +1,4 @@
-import axiosInstance from "@/utils/axiosInstance";
+import axiosInstance, { refreshClient } from "@/utils/axiosInstance";
 import { headers } from "@/utils/constant";
 
 export const registerUser = async (formData) => {
@@ -17,7 +17,7 @@ export const getAuthenticatedUser = async (accessToken) => {
 };
 
 export const refreshAccessToken = async () => {
-  return await axiosInstance.post("/auth/refresh-token", null, {
+  return await refreshClient.post("/auth/refresh-token", null, {
     withCredentials: true,
   });
 };

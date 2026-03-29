@@ -1,6 +1,11 @@
 import tryCatchFn from "../lib/tryCatchFn.js";
 import responseHandler from "../lib/responseHandler.js";
-import { createAdminSendToken } from "../lib/token.js";
+import {
+  ADMIN_REFRESH_COOKIE_NAME,
+  createAdminSendToken,
+  LEGACY_ADMIN_REFRESH_COOKIE_PATH,
+  setRefreshTokenCookie,
+} from "../lib/token.js";
 import adminService from "../services/admin.service.js";
 import userService from "../services/user.service.js";
 import { getRefreshTokenFromRequest } from "../lib/refreshToken.js";
@@ -9,9 +14,18 @@ const { successResponse } = responseHandler;
 
 export const adminLogin = tryCatchFn(async (req, res) => {
   const user = await adminService.adminLogin(req);
-  const { accessToken, refreshToken, cookieOptions } = createAdminSendToken(user, user.tokenVersion || 0);
+  const { accessToken, refreshToken } = createAdminSendToken(
+    user,
+    user.tokenVersion || 0,
+  );
   await adminService.issueAndPersistRefreshToken(user._id, refreshToken);
-  res.cookie("adminRefreshToken", refreshToken, cookieOptions);
+  setRefreshTokenCookie(
+    res,
+    req,
+    ADMIN_REFRESH_COOKIE_NAME,
+    refreshToken,
+    [LEGACY_ADMIN_REFRESH_COOKIE_PATH],
+  );
   return successResponse(res, { accessToken }, "Admin login successful", 200);
 });
 
@@ -48,11 +62,21 @@ export const authenticateAdmin = tryCatchFn(async (req, res) => {
 });
 
 export const refreshAdminAccessToken = tryCatchFn(async (req, res) => {
-  const incomingRefreshToken = getRefreshTokenFromRequest(req, "adminRefreshToken");
+  const incomingRefreshToken = getRefreshTokenFromRequest(
+    req,
+    ADMIN_REFRESH_COOKIE_NAME,
+  );
   const user = await adminService.refreshAdminAccessToken(incomingRefreshToken);
-  const { accessToken, refreshToken: rotatedRefreshToken, cookieOptions } = createAdminSendToken(user, user.tokenVersion || 0);
+  const { accessToken, refreshToken: rotatedRefreshToken } =
+    createAdminSendToken(user, user.tokenVersion || 0);
   await adminService.issueAndPersistRefreshToken(user._id, rotatedRefreshToken);
-  res.cookie("adminRefreshToken", rotatedRefreshToken, cookieOptions);
+  setRefreshTokenCookie(
+    res,
+    req,
+    ADMIN_REFRESH_COOKIE_NAME,
+    rotatedRefreshToken,
+    [LEGACY_ADMIN_REFRESH_COOKIE_PATH],
+  );
   return successResponse(
     res,
     { accessToken },
@@ -108,6 +132,6 @@ export const deleteProfileAccount = tryCatchFn(async (req, res) => {
 });
 
 export const logoutAdmin = tryCatchFn(async (req, res) => {
-  const responseData = await adminService.logoutAdmin(res, req.user._id);
+  const responseData = await adminService.logoutAdmin(req, res, req.user._id);
   return successResponse(res, responseData, "Logged out successfully", 200);
 });

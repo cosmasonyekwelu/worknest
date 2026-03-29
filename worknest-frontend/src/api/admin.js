@@ -1,4 +1,4 @@
-import axiosInstance from "@/utils/axiosInstance";
+import axiosInstance, { refreshClient } from "@/utils/axiosInstance";
 import { headers } from "@/utils/constant";
 
 
@@ -18,7 +18,7 @@ export const getAuthenticatedAdmin = async (accessToken) => {
 };
 
 export const refreshAdminAccessToken = async () => {
-  return await axiosInstance.post("/admin/refresh-token", null, {
+  return await refreshClient.post("/admin/refresh-token", null, {
     withCredentials: true,
   });
 };

@@ -121,6 +121,34 @@ export const AuthProvider = ({ children }) => {
     };
   }, [isAdminPath, logout, setAccessToken]);
 
+  const refreshSessionQuery = useQuery({
+    queryKey: ["refresh_token", isAdminPath],
+    queryFn: async () => {
+      try {
+        const refresh = isAdminPath
+          ? refreshAdminAccessToken
+          : refreshAccessToken;
+
+        const res = await refresh();
+        const newToken = res?.data?.data?.accessToken;
+
+        if (!newToken) {
+          throw new Error("Refresh failed");
+        }
+
+        setAccessToken(newToken);
+        return newToken;
+      } catch (error) {
+        logout();
+        throw error;
+      }
+    },
+    enabled: !accessToken && !hasLoggedOut,
+    retry: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+
   useQuery({
     queryKey: [isAdminPath ? "admin_profile" : "auth_user", accessToken],
     queryFn: async () => {
@@ -155,34 +183,9 @@ export const AuthProvider = ({ children }) => {
     // refetchIntervalInBackground: true,
   });
 
-  useQuery({
-    queryKey: ["refresh_token", isAdminPath],
-    queryFn: async () => {
-      try {
-        const refresh = isAdminPath
-          ? refreshAdminAccessToken
-          : refreshAccessToken;
+  const authBusy = isAuthenticating || refreshSessionQuery.isPending;
 
-        const res = await refresh();
-        const newToken = res?.data?.data?.accessToken;
-
-        if (!newToken) {
-          throw new Error("Refresh failed");
-        }
-
-        setAccessToken(newToken);
-        return newToken;
-      } catch (error) {
-        logout();
-        throw error;
-      }
-    },
-    enabled: !accessToken && !hasLoggedOut,
-    retry: false,
-    refetchOnWindowFocus: false,
-  });
-
-  if (isAuthenticating) {
+  if (authBusy) {
     return <SuspenseUi />;
   }
 
@@ -194,7 +197,7 @@ export const AuthProvider = ({ children }) => {
         logout,
         accessToken,
         setAccessToken,
-        isAuthenticating,
+        isAuthenticating: authBusy,
       }}
     >
       {children}

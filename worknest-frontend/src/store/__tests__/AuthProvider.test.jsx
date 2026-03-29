@@ -119,6 +119,8 @@ describe("AuthProvider", () => {
       expect(screen.getByTestId("auth-state")).toHaveTextContent("user-1");
     });
 
+    expect(refreshAccessToken).toHaveBeenCalledTimes(1);
+
     const response = await axiosInstance.get("/jobs/protected");
     expect(response.data.status).toBe("retried");
 
@@ -131,7 +133,7 @@ describe("AuthProvider", () => {
       null,
       { withCredentials: true },
     );
-    expect(getAuthenticatedUser).toHaveBeenLastCalledWith("refreshed-token");
+    expect(getAuthenticatedUser).toHaveBeenCalledWith("initial-token");
     expect(getItemSpy).not.toHaveBeenCalled();
     expect(setItemSpy).not.toHaveBeenCalled();
     expect(removeItemSpy).not.toHaveBeenCalled();
@@ -156,6 +158,8 @@ describe("AuthProvider", () => {
       expect(screen.getByTestId("auth-state")).toHaveTextContent("initial-token");
       expect(screen.getByTestId("auth-state")).toHaveTextContent("user-1");
     });
+
+    expect(refreshAccessToken).toHaveBeenCalled();
 
     await expect(axiosInstance.get("/jobs/protected")).rejects.toThrow("refresh failed");
 

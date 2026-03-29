@@ -1,6 +1,11 @@
 import tryCatchFn from "../lib/tryCatchFn.js";
 import responseHandler from "../lib/responseHandler.js";
-import { createSendToken } from "../lib/token.js";
+import {
+  createSendToken,
+  LEGACY_USER_REFRESH_COOKIE_PATH,
+  setRefreshTokenCookie,
+  USER_REFRESH_COOKIE_NAME,
+} from "../lib/token.js";
 import authService from "../services/auth.service.js";
 import { getRefreshTokenFromRequest } from "../lib/refreshToken.js";
 
@@ -8,17 +13,29 @@ const { successResponse } = responseHandler;
 
 export const register = tryCatchFn(async (req, res) => {
   const user = await authService.register(req);
-  const { accessToken, refreshToken, cookieOptions } = createSendToken(user, user.tokenVersion || 0);
+  const { accessToken, refreshToken } = createSendToken(user, user.tokenVersion || 0);
   await authService.issueAndPersistRefreshToken(user._id, refreshToken);
-  res.cookie("userRefreshToken", refreshToken, cookieOptions);
+  setRefreshTokenCookie(
+    res,
+    req,
+    USER_REFRESH_COOKIE_NAME,
+    refreshToken,
+    [LEGACY_USER_REFRESH_COOKIE_PATH],
+  );
   return successResponse(res, { accessToken }, "Registration successful", 201);
 });
 
 export const login = tryCatchFn(async (req, res) => {
   const user = await authService.login(req);
-  const { accessToken, refreshToken, cookieOptions } = createSendToken(user, user.tokenVersion || 0);
+  const { accessToken, refreshToken } = createSendToken(user, user.tokenVersion || 0);
   await authService.issueAndPersistRefreshToken(user._id, refreshToken);
-  res.cookie("userRefreshToken", refreshToken, cookieOptions);
+  setRefreshTokenCookie(
+    res,
+    req,
+    USER_REFRESH_COOKIE_NAME,
+    refreshToken,
+    [LEGACY_USER_REFRESH_COOKIE_PATH],
+  );
   return successResponse(res, { accessToken }, "Login successful", 200);
 });
 
@@ -29,11 +46,23 @@ export const authenticateUser = tryCatchFn(async (req, res) => {
 });
 
 export const refreshAccessToken = tryCatchFn(async (req, res) => {
-  const incomingRefreshToken = getRefreshTokenFromRequest(req, "userRefreshToken");
+  const incomingRefreshToken = getRefreshTokenFromRequest(
+    req,
+    USER_REFRESH_COOKIE_NAME,
+  );
   const user = await authService.refreshAccessToken(incomingRefreshToken);
-  const { accessToken, refreshToken: rotatedRefreshToken, cookieOptions } = createSendToken(user, user.tokenVersion || 0);
+  const { accessToken, refreshToken: rotatedRefreshToken } = createSendToken(
+    user,
+    user.tokenVersion || 0,
+  );
   await authService.issueAndPersistRefreshToken(user._id, rotatedRefreshToken);
-  res.cookie("userRefreshToken", rotatedRefreshToken, cookieOptions);
+  setRefreshTokenCookie(
+    res,
+    req,
+    USER_REFRESH_COOKIE_NAME,
+    rotatedRefreshToken,
+    [LEGACY_USER_REFRESH_COOKIE_PATH],
+  );
   return successResponse(
     res,
     { accessToken },
@@ -60,6 +89,6 @@ export const resendVerificationToken = tryCatchFn(async (req, res) => {
 });
 
 export const logout = tryCatchFn(async (req, res) => {
-  const responseData = await authService.logout(res, req.user._id);
+  const responseData = await authService.logout(req, res, req.user._id);
   return successResponse(res, responseData, "Logged out successfully", 200);
 });

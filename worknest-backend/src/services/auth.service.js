@@ -11,6 +11,11 @@ import {
   persistRefreshTokenState,
   invalidateRefreshTokenState,
 } from "../lib/session.js";
+import {
+  clearRefreshTokenCookie,
+  LEGACY_USER_REFRESH_COOKIE_PATH,
+  USER_REFRESH_COOKIE_NAME,
+} from "../lib/token.js";
 
 const authService = {
   // registration service
@@ -189,18 +194,14 @@ const authService = {
     return user;
   },
 
-  logout: async (res, userId) => {
+  logout: async (req, res, userId) => {
     if (userId) {
       await invalidateRefreshTokenState(userId, true);
     }
 
-    res.cookie("userRefreshToken", "", {
-      maxAge: 0,
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-      path: "/api/v1/auth/refresh-token",
-    });
+    clearRefreshTokenCookie(res, req, USER_REFRESH_COOKIE_NAME, [
+      LEGACY_USER_REFRESH_COOKIE_PATH,
+    ]);
     return true;
   },
 };

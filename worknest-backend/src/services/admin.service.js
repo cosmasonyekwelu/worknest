@@ -10,6 +10,11 @@ import {
   persistRefreshTokenState,
   invalidateRefreshTokenState,
 } from "../lib/session.js";
+import {
+  ADMIN_REFRESH_COOKIE_NAME,
+  clearRefreshTokenCookie,
+  LEGACY_ADMIN_REFRESH_COOKIE_PATH,
+} from "../lib/token.js";
 
 const adminService = {
   // admin login service - only admins can login
@@ -152,18 +157,14 @@ const adminService = {
     };
   },
 
-  logoutAdmin: async (res, userId) => {
+  logoutAdmin: async (req, res, userId) => {
     if (userId) {
       await invalidateRefreshTokenState(userId, true);
     }
 
-    res.cookie("adminRefreshToken", "", {
-      maxAge: 0,
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-      path: "/api/v1/admin/refresh-token",
-    });
+    clearRefreshTokenCookie(res, req, ADMIN_REFRESH_COOKIE_NAME, [
+      LEGACY_ADMIN_REFRESH_COOKIE_PATH,
+    ]);
     return true;
   },
   deleteAccountAdmins: async (userId) => {

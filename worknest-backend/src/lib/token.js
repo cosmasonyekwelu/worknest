@@ -5,6 +5,112 @@ import { getJwtSecrets } from "../config/env.js";
 
 dotenv.config();
 
+export const USER_REFRESH_COOKIE_NAME = "userRefreshToken";
+export const ADMIN_REFRESH_COOKIE_NAME = "adminRefreshToken";
+export const REFRESH_COOKIE_PATH = "/";
+export const LEGACY_USER_REFRESH_COOKIE_PATH = "/api/v1/auth/refresh-token";
+export const LEGACY_ADMIN_REFRESH_COOKIE_PATH = "/api/v1/admin/refresh-token";
+
+const DEFAULT_REFRESH_COOKIE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+const DURATION_TO_MS = {
+  ms: 1,
+  s: 1000,
+  m: 60 * 1000,
+  h: 60 * 60 * 1000,
+  d: 24 * 60 * 60 * 1000,
+};
+
+const parseDurationToMs = (value) => {
+  if (typeof value === "number" && Number.isFinite(value) && value > 0) {
+    return value;
+  }
+
+  if (typeof value !== "string") {
+    return DEFAULT_REFRESH_COOKIE_MAX_AGE_MS;
+  }
+
+  const trimmedValue = value.trim();
+  const matchedDuration = /^(\d+)(ms|s|m|h|d)$/i.exec(trimmedValue);
+
+  if (!matchedDuration) {
+    return DEFAULT_REFRESH_COOKIE_MAX_AGE_MS;
+  }
+
+  const [, rawAmount, rawUnit] = matchedDuration;
+  const amount = Number.parseInt(rawAmount, 10);
+  const unit = rawUnit.toLowerCase();
+
+  if (!Number.isFinite(amount) || amount <= 0 || !DURATION_TO_MS[unit]) {
+    return DEFAULT_REFRESH_COOKIE_MAX_AGE_MS;
+  }
+
+  return amount * DURATION_TO_MS[unit];
+};
+
+const isSecureRequest = (req) => {
+  if (req?.secure) {
+    return true;
+  }
+
+  const forwardedProto = req?.headers?.["x-forwarded-proto"];
+  return (
+    typeof forwardedProto === "string" &&
+    forwardedProto.split(",")[0].trim().toLowerCase() === "https"
+  );
+};
+
+const getRefreshCookieMaxAge = () =>
+  parseDurationToMs(process.env.JWT_REFRESH_TOKEN_EXPIRES);
+
+export const buildRefreshCookieOptions = (req, overrides = {}) => {
+  const secure = isSecureRequest(req);
+  const maxAge = getRefreshCookieMaxAge();
+
+  return {
+    httpOnly: true,
+    secure,
+    sameSite: secure ? "none" : "lax",
+    path: REFRESH_COOKIE_PATH,
+    maxAge,
+    expires: new Date(Date.now() + maxAge),
+    ...overrides,
+  };
+};
+
+export const clearRefreshTokenCookie = (
+  res,
+  req,
+  cookieName,
+  legacyPaths = [],
+) => {
+  const clearedCookieOptions = buildRefreshCookieOptions(req, {
+    maxAge: 0,
+    expires: new Date(0),
+  });
+
+  res.cookie(cookieName, "", clearedCookieOptions);
+
+  legacyPaths
+    .filter((path) => path && path !== clearedCookieOptions.path)
+    .forEach((path) => {
+      res.cookie(cookieName, "", {
+        ...clearedCookieOptions,
+        path,
+      });
+    });
+};
+
+export const setRefreshTokenCookie = (
+  res,
+  req,
+  cookieName,
+  refreshToken,
+  legacyPaths = [],
+) => {
+  clearRefreshTokenCookie(res, req, cookieName, legacyPaths);
+  res.cookie(cookieName, refreshToken, buildRefreshCookieOptions(req));
+};
+
 export const signToken = (id, tokenVersion = 0) => {
   const { accessSecret, refreshSecret } = getJwtSecrets();
   const refreshJti = crypto.randomUUID();
@@ -28,37 +134,17 @@ export const signToken = (id, tokenVersion = 0) => {
 export const createSendToken = (user, tokenVersion = 0) => {
   if (!user) return;
   const token = signToken(user._id, tokenVersion); //this is from mongodb id doc
-  //create cookie to store our refreshToken in order to prevent browser access on client
-  const isProduction = process.env.NODE_ENV === "production";
-  const cookieOptions = {
-    httpOnly: true, //cookie is not accessible in javascript
-    secure: isProduction, //send cookie over HTTPS only when in prod env
-    maxAge: 7 * 24 * 60 * 60 * 1000, //cookie is valid for 7days
-    path: "/api/v1/auth/refresh-token", //cookie is valid on all path across your domain
-    sameSite: isProduction ? "none" : "lax", //is required when the cookie is being used on diff domains. We want to adjust the cross-site request policy. Our app is both client/server which has different address so we want to ensure that in production mode, the cookie can be passed over a secure relay by setting the secure option to true (ensuring cookie is sent over HTTPS), but in dev mode we specify lax because we need to use it locally. If sameSite is set to none and secure is set to false, the browser will reject the cookie.
-  };
   return {
     accessToken: token.accessToken,
     refreshToken: token.refreshToken,
-    cookieOptions,
   };
 };
 
 export const createAdminSendToken = (user, tokenVersion = 0) => {
   if (!user) return;
   const token = signToken(user._id, tokenVersion); //this is from mongodb id doc
-  //create cookie to store our refreshToken in order to prevent browser access on client
-  const isProduction = process.env.NODE_ENV === "production";
-  const cookieOptions = {
-    httpOnly: true, //cookie is not accessible in javascript
-    secure: isProduction, //send cookie over HTTPS only when in prod env
-    maxAge: 7 * 24 * 60 * 60 * 1000, //cookie is valid for 7days
-    path: "/api/v1/admin/refresh-token", //cookie is valid on all path across your domain
-    sameSite: isProduction ? "none" : "lax", //is required when the cookie is being used on diff domains. We want to adjust the cross-site request policy. Our app is both client/server which has different address so we want to ensure that in production mode, the cookie can be passed over a secure relay by setting the secure option to true (ensuring cookie is sent over HTTPS), but in dev mode we specify lax because we need to use it locally. If sameSite is set to none and secure is set to false, the browser will reject the cookie.
-  };
   return {
     accessToken: token.accessToken,
     refreshToken: token.refreshToken,
-    cookieOptions,
   };
 };
