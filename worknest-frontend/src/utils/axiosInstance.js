@@ -12,5 +12,6 @@ const config = {
 };
 
 const axiosInstance = axios.create(config);
+export const refreshClient = axios.create(config);
 
 export default axiosInstance;

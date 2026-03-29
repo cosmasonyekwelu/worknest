@@ -1,6 +1,7 @@
 import { PDFParse } from "pdf-parse";
 import mammoth from "mammoth";
 import PDFDocument from "pdfkit";
+import { Document, Packer, Paragraph, TextRun } from "docx";
 import Resume from "../models/resume.js";
 import Jobs from "../models/jobs.js";
 import { uploadToCloudinary, deleteFromCloudinary } from "../lib/cloudinary.js";
@@ -240,10 +241,70 @@ const buildPdfBuffer = (text, { heading } = {}) =>
     doc.end();
   });
 
-export const getTailoredResumePdf = async (userId, jobId) => {
+const buildDocxBuffer = async (text, { heading } = {}) => {
+  const paragraphs = [];
+  if (heading) {
+    paragraphs.push(new Paragraph({ children: [new TextRun({ text: heading, bold: true, size: 28 })] }));
+    paragraphs.push(new Paragraph({ children: [new TextRun({ text: "" })] }));
+  }
+  const lines = String(text || "").split(/\r?\n/);
+  lines.forEach((line) => {
+    paragraphs.push(new Paragraph({ children: [new TextRun({ text: line })] }));
+  });
+
+  const doc = new Document({
+    sections: [
+      {
+        properties: {},
+        children: paragraphs,
+      },
+    ],
+  });
+
+  return Packer.toBuffer(doc);
+};
+
+const buildFileBuffer = async (text, format = "pdf", heading = "Tailored Resume") => {
+  const normalizedFormat = (format || "pdf").toLowerCase();
+  if (normalizedFormat === "docx") {
+    const buffer = await buildDocxBuffer(text, { heading });
+    return { buffer, extension: "docx", mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" };
+  }
+
+  const buffer = await buildPdfBuffer(text, { heading });
+  return { buffer, extension: "pdf", mimeType: "application/pdf" };
+};
+
+export const getTailoredResumeFile = async (userId, jobId, format = "pdf") => {
   const { content, createdAt } = await tailorResume(userId, jobId);
-  const buffer = await buildPdfBuffer(content, { heading: "Tailored Resume" });
+  const { buffer, extension, mimeType } = await buildFileBuffer(content, format);
   const safeJobId = String(jobId).slice(-6);
-  const filename = `tailored-resume-${safeJobId}.pdf`;
-  return { buffer, filename, createdAt };
+  const filename = `tailored-resume-${safeJobId}.${extension}`;
+  return { buffer, filename, mimeType, createdAt };
+};
+
+export const tailorResumeCustom = async (userId, jobDescription) => {
+  const resume = await Resume.findOne({ user: userId });
+  if (!resume) {
+    throw new NotFoundError("Upload your resume first");
+  }
+
+  if (!resume.parsedText || resume.parsedText.trim().length < 50) {
+    throw new ValidationError("Resume text is unavailable. Re-upload your resume.");
+  }
+
+  const tailoredText = await tailorResumeAI(resume.parsedText, jobDescription);
+
+  return {
+    tailoredText,
+    resume: sanitizeResume(resume),
+    generatedAt: new Date(),
+  };
+};
+
+export const getCustomTailoredFile = async (userId, jobDescription, format = "pdf") => {
+  const { tailoredText, generatedAt } = await tailorResumeCustom(userId, jobDescription);
+  const { buffer, extension, mimeType } = await buildFileBuffer(tailoredText, format);
+  const filename = `tailored-custom-${Date.now()}.${extension}`;
+  return { buffer, filename, mimeType, generatedAt };
 };

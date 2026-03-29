@@ -1,6 +1,13 @@
 import tryCatchFn from "../lib/tryCatchFn.js";
 import responseHandler from "../lib/responseHandler.js";
-import { uploadResume, getResumeAnalysis, tailorResume, getTailoredResumePdf } from "../services/resume.service.js";
+import {
+  uploadResume,
+  getResumeAnalysis,
+  tailorResume,
+  tailorResumeCustom,
+  getTailoredResumeFile,
+  getCustomTailoredFile,
+} from "../services/resume.service.js";
 import { ValidationError } from "../lib/errors.js";
 
 const { successResponse } = responseHandler;
@@ -45,11 +52,39 @@ export const tailorForJob = tryCatchFn(async (req, res) => {
 
 export const downloadTailored = tryCatchFn(async (req, res) => {
   const { jobId } = req.params;
-  const { buffer, filename } = await getTailoredResumePdf(req.user._id, jobId);
+  const format = (req.query?.format || "pdf").toLowerCase();
+  const { buffer, filename, mimeType } = await getTailoredResumeFile(req.user._id, jobId, format);
 
-  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader("Content-Type", mimeType);
   res.setHeader("Content-Disposition", `attachment; filename=\"${filename}\"`);
   return res.status(200).send(buffer);
+});
+
+export const tailorCustom = tryCatchFn(async (req, res) => {
+  const { jobDescription } = req.body || {};
+  if (!jobDescription || !jobDescription.trim()) {
+    throw new ValidationError("Job description is required");
+  }
+
+  const format = (req.query?.format || "").toLowerCase();
+
+  if (["pdf", "docx"].includes(format)) {
+    const { buffer, filename, mimeType } = await getCustomTailoredFile(req.user._id, jobDescription, format);
+    res.setHeader("Content-Type", mimeType);
+    res.setHeader("Content-Disposition", `attachment; filename=\"${filename}\"`);
+    return res.status(200).send(buffer);
+  }
+
+  const result = await tailorResumeCustom(req.user._id, jobDescription);
+  return successResponse(
+    res,
+    {
+      tailoredText: result.tailoredText,
+      generatedAt: result.generatedAt,
+    },
+    "Tailored resume generated successfully",
+    200,
+  );
 });
 
 export default {
@@ -57,4 +92,5 @@ export default {
   getAnalysis,
   tailorForJob,
   downloadTailored,
+  tailorCustom,
 };

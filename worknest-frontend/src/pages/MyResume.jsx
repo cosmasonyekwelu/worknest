@@ -1,7 +1,12 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
-import { ArrowLeft, FileText, Loader2, Sparkles, Upload } from "lucide-react";
-import { useResumeAnalysis, useUploadResume } from "@/hooks/useResume";
+import { ArrowLeft, Download, FileText, Loader2, Sparkles, Upload } from "lucide-react";
+import {
+  useDownloadCustomTailoredResume,
+  useResumeAnalysis,
+  useTailorResumeCustom,
+  useUploadResume,
+} from "@/hooks/useResume";
 import { formatDate } from "@/utils/constant";
 import { toast } from "sonner";
 
@@ -30,7 +35,11 @@ export default function MyResume() {
   const navigate = useNavigate();
   const { data: resume, isLoading } = useResumeAnalysis();
   const uploadMutation = useUploadResume();
+  const tailorCustomMutation = useTailorResumeCustom();
+  const downloadCustomMutation = useDownloadCustomTailoredResume();
   const [selectedFileName, setSelectedFileName] = useState("");
+  const [customJobDescription, setCustomJobDescription] = useState("");
+  const [customTailoredText, setCustomTailoredText] = useState("");
 
   const analysis = resume?.analysis || null;
 
@@ -48,6 +57,52 @@ export default function MyResume() {
   };
 
   const hasAnalysis = useMemo(() => !!analysis && resume?.status === "ready", [analysis, resume?.status]);
+
+  const handleTailorCustom = async () => {
+    if (!customJobDescription.trim()) {
+      toast.error("Add a job description first");
+      return;
+    }
+    if (!resume) {
+      toast.error("Upload your resume first");
+      return;
+    }
+    if (resume?.status !== "ready") {
+      toast.error("Resume analysis is still running. Please try again soon.");
+      return;
+    }
+    try {
+      const res = await tailorCustomMutation.mutateAsync({ jobDescription: customJobDescription });
+      const text = res?.data?.data?.tailoredText || res?.data?.tailoredText || res?.tailoredText;
+      if (text) {
+        setCustomTailoredText(text);
+        toast.success("Tailored resume ready");
+      }
+    } catch {
+      // handled in hook
+    }
+  };
+
+  const handleDownloadCustom = async (format = "pdf") => {
+    if (!customJobDescription.trim()) {
+      toast.error("Add a job description first");
+      return;
+    }
+    try {
+      const res = await downloadCustomMutation.mutateAsync({ jobDescription: customJobDescription, format });
+      const blob = res?.data || res;
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `tailored-custom.${format}`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      // handled in hook
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 pb-16">
@@ -205,6 +260,67 @@ export default function MyResume() {
                         </ul>
                       </div>
                     )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="text-orange-500" size={18} />
+                  <h3 className="text-lg font-bold text-gray-900">Tailor with a custom job description</h3>
+                </div>
+                {tailorCustomMutation.isPending && (
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <Loader2 className="animate-spin" size={16} />
+                    Tailoring...
+                  </div>
+                )}
+              </div>
+
+              <textarea
+                className="w-full border border-gray-200 rounded-xl p-4 text-sm min-h-[140px] focus:outline-none focus:ring-2 focus:ring-orange-100 focus:border-orange-300"
+                placeholder="Paste any job description here..."
+                value={customJobDescription}
+                onChange={(e) => setCustomJobDescription(e.target.value)}
+              />
+
+              <div className="flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={handleTailorCustom}
+                  disabled={tailorCustomMutation.isPending}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-orange-500 text-white font-semibold hover:bg-orange-600 transition disabled:opacity-60"
+                >
+                  {tailorCustomMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                  Tailor now
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDownloadCustom("pdf")}
+                  disabled={downloadCustomMutation.isPending || !customJobDescription.trim()}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 text-gray-800 hover:bg-gray-100 transition disabled:opacity-60"
+                >
+                  {downloadCustomMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                  Download PDF
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDownloadCustom("docx")}
+                  disabled={downloadCustomMutation.isPending || !customJobDescription.trim()}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 text-gray-800 hover:bg-gray-100 transition disabled:opacity-60"
+                >
+                  {downloadCustomMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                  Download DOCX
+                </button>
+              </div>
+
+              {customTailoredText && (
+                <div className="space-y-2">
+                  <p className="text-sm font-semibold text-gray-600">Preview</p>
+                  <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 max-h-[360px] overflow-auto text-sm whitespace-pre-wrap leading-6 text-gray-800">
+                    {customTailoredText}
                   </div>
                 </div>
               )}

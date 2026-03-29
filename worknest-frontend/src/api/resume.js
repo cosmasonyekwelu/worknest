@@ -26,3 +26,22 @@ export const downloadTailoredResume = async ({ jobId, accessToken }) => {
     responseType: "blob",
   });
 };
+
+export const tailorResumeCustom = async ({ jobDescription, accessToken }) => {
+  return axiosInstance.post(
+    "/resume/tailor/custom",
+    { jobDescription },
+    headers(accessToken),
+  );
+};
+
+export const downloadCustomTailoredResume = async ({ jobDescription, format = "pdf", accessToken }) => {
+  return axiosInstance.post(
+    `/resume/tailor/custom?format=${format}`,
+    { jobDescription },
+    {
+      ...headers(accessToken),
+      responseType: "blob",
+    },
+  );
+};

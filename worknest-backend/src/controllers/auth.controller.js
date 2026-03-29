@@ -36,7 +36,7 @@ export const refreshAccessToken = tryCatchFn(async (req, res) => {
   res.cookie("userRefreshToken", rotatedRefreshToken, cookieOptions);
   return successResponse(
     res,
-    { accessToken },
+    { accessToken, refreshToken: rotatedRefreshToken },
     "AccessToken refreshed successfully",
     200,
   );

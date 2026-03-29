@@ -1,5 +1,5 @@
 import express from "express";
-import { upload, getAnalysis, tailorForJob, downloadTailored } from "../controllers/resume.controller.js";
+import { upload, getAnalysis, tailorForJob, downloadTailored, tailorCustom } from "../controllers/resume.controller.js";
 import { authorizedRoles, verifyAuth } from "../middleware/authenticate.js";
 import uploadMiddleware from "../middleware/upload.js";
 import { validateRequest } from "../middleware/validateRequest.js";
@@ -20,6 +20,14 @@ router.get(
   verifyAuth,
   authorizedRoles("applicant"),
   getAnalysis,
+);
+
+router.post(
+  "/tailor/custom",
+  verifyAuth,
+  authorizedRoles("applicant"),
+  validateRequest(resumeValidation.tailorCustomBody),
+  tailorCustom,
 );
 
 router.post(

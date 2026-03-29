@@ -10,6 +10,8 @@ RUN apk add --no-cache curl \
   && addgroup -S nodejs \
   && adduser -S nodeuser -G nodejs
 
+RUN mkdir -p /app/logs && chown -R nodeuser:nodejs /app/logs
+
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 

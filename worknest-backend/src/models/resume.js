@@ -63,7 +63,6 @@ const resumeSchema = new Schema(
   { timestamps: true },
 );
 
-resumeSchema.index({ user: 1 });
 resumeSchema.index({ user: 1, "tailoredResumes.job": 1 });
 
 const Resume = mongoose.models.Resume || model("Resume", resumeSchema);

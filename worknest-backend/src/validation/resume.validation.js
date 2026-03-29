@@ -6,4 +6,7 @@ export const resumeValidation = {
   tailorParam: z.object({
     jobId: objectId,
   }),
+  tailorCustomBody: z.object({
+    jobDescription: z.string().min(20, "Job description must be at least 20 characters"),
+  }),
 };

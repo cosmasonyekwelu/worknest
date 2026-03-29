@@ -251,7 +251,7 @@ export const analyzeResume = async (resumeText) => {
 
   const prompt = {
     role: "user",
-    content: `You are a career advisor. Given the following resume text, extract structured information and provide insights. Return JSON with fields: skills (string array), experience (array of { title, company, duration, description }), education (array of { degree, institution, year }), summary (string), careerPaths (array of { title, matchScore (0-100), feedback }), strengths (array of strings), gaps (array of strings).\nResume:\n${resumeText}`,
+    content: `You are a career advisor. Given the following resume text, extract structured information and provide insights. Return JSON with fields: skills (string array), experience (array ONLY of objects { title, company, duration, description } — never a single object), education (array of { degree, institution, year }), summary (string), careerPaths (array of { title, matchScore (0-100), feedback }), strengths (array of strings), gaps (array of strings).\nResume:\n${resumeText}`,
   };
 
   const result = await groqChatCompletion([
@@ -262,9 +262,15 @@ export const analyzeResume = async (resumeText) => {
     prompt,
   ], { max_tokens: 900, temperature: 0.15 });
 
+  const normalizedExperience = Array.isArray(result?.experience)
+    ? result.experience
+    : result?.experience
+      ? [result.experience]
+      : [];
+
   return {
     skills: Array.isArray(result?.skills) ? result.skills : [],
-    experience: Array.isArray(result?.experience) ? result.experience : [],
+    experience: normalizedExperience,
     education: Array.isArray(result?.education) ? result.education : [],
     summary: String(result?.summary || "").trim(),
     careerPaths: Array.isArray(result?.careerPaths) ? result.careerPaths : [],

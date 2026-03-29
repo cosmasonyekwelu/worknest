@@ -3,7 +3,9 @@ import { toast } from "sonner";
 import { useAuth } from "@/store";
 import {
   downloadTailoredResume,
+  downloadCustomTailoredResume,
   fetchResumeAnalysis,
+  tailorResumeCustom,
   tailorResumeForJob,
   uploadResumeFile,
 } from "@/api/resume";
@@ -65,6 +67,30 @@ export function useDownloadTailoredResume() {
 
   return useMutation({
     mutationFn: ({ jobId }) => downloadTailoredResume({ jobId, accessToken }),
+    onError: (error) => {
+      const message = error?.response?.data?.message || "Download failed";
+      toast.error(message);
+    },
+  });
+}
+
+export function useTailorResumeCustom() {
+  const { accessToken } = useAuth();
+
+  return useMutation({
+    mutationFn: ({ jobDescription }) => tailorResumeCustom({ jobDescription, accessToken }),
+    onError: (error) => {
+      const message = error?.response?.data?.message || "Unable to tailor resume";
+      toast.error(message);
+    },
+  });
+}
+
+export function useDownloadCustomTailoredResume() {
+  const { accessToken } = useAuth();
+
+  return useMutation({
+    mutationFn: ({ jobDescription, format }) => downloadCustomTailoredResume({ jobDescription, format, accessToken }),
     onError: (error) => {
       const message = error?.response?.data?.message || "Download failed";
       toast.error(message);
