@@ -6,11 +6,33 @@ import responseHandler from "../lib/responseHandler.js";
 import Jobs from "../models/jobs.js";
 import User from "../models/user.js";
 import Application from "../models/application.js";
+import Notification from "../models/notification.js";
 import { jobValidation } from "../validation/job.validation.js";
-import { NotFoundError, ValidationError } from "../lib/errors.js";
+import { ConflictError, NotFoundError, ValidationError } from "../lib/errors.js";
 import { ZodError } from "zod";
 
 const { successResponse } = responseHandler;
+const logLegacyCompanyLogoWarning = () => {
+  if (process.env.NODE_ENV !== "production") {
+    console.warn(
+      "Jobs API is returning legacy field `avatar` alongside `companyLogo`. Frontend should migrate to `companyLogo`.",
+    );
+  }
+};
+
+const serializeJob = (job) => {
+  if (!job) {
+    return job;
+  }
+
+  const plain = job.toObject ? job.toObject() : { ...job };
+  return {
+    ...plain,
+    companyLogo: plain.companyLogo || plain.avatar || "",
+  };
+};
+
+const serializeJobCollection = (jobs = []) => jobs.map(serializeJob);
 
 const ensureValid = (schema, payload) => {
   try {
@@ -41,7 +63,13 @@ export const uploadJobAvatarController = tryCatchFn(async (req, res) => {
 
   const updatedJob = await uploadJobAvatar(jobId, avatarPayload);
 
-  return successResponse(res, updatedJob, "Job avatar uploaded successfully", 200);
+  logLegacyCompanyLogoWarning();
+  return successResponse(
+    res,
+    serializeJob(updatedJob),
+    "Job avatar uploaded successfully",
+    200,
+  );
 });
 
 const createJobs = tryCatchFn(async (req, res) => {
@@ -71,15 +99,8 @@ const createJobs = tryCatchFn(async (req, res) => {
   }
 
   const job = await Jobs.create({ ...payload, avatar: avatarUrl, avatarId });
-  await Application.updateMany(
-    { job: job._id },
-    {
-      jobTitle: job.title,
-      companyName: job.companyName,
-    },
-  );
-
-  return successResponse(res, job, "Job created successfully", 201);
+  logLegacyCompanyLogoWarning();
+  return successResponse(res, serializeJob(job), "Job created successfully", 201);
 });
 
 const getJobs = tryCatchFn(async (req, res) => {
@@ -91,8 +112,17 @@ const getJobs = tryCatchFn(async (req, res) => {
   };
 
   const data = await searchJobService(filters);
+  logLegacyCompanyLogoWarning();
 
-  return successResponse(res, data, "Jobs fetched successfully", 200);
+  return successResponse(
+    res,
+    {
+      ...data,
+      data: serializeJobCollection(data.data),
+    },
+    "Jobs fetched successfully",
+    200,
+  );
 });
 
 const getJobById = tryCatchFn(async (req, res) => {
@@ -118,7 +148,13 @@ const getJobById = tryCatchFn(async (req, res) => {
     req.user?.savedJobs?.some((savedId) => savedId.toString() === id.toString())
   );
 
-  return successResponse(res, { ...job.toObject(), saved }, "Job fetched successfully", 200);
+  logLegacyCompanyLogoWarning();
+  return successResponse(
+    res,
+    { ...serializeJob(job), saved },
+    "Job fetched successfully",
+    200,
+  );
 });
 
 const updateJob = tryCatchFn(async (req, res) => {
@@ -181,7 +217,8 @@ const updateJob = tryCatchFn(async (req, res) => {
     },
   );
 
-  return successResponse(res, job, "Job updated successfully", 200);
+  logLegacyCompanyLogoWarning();
+  return successResponse(res, serializeJob(job), "Job updated successfully", 200);
 });
 
 const deleteJob = tryCatchFn(async (req, res) => {
@@ -198,10 +235,22 @@ const deleteJob = tryCatchFn(async (req, res) => {
     throw new NotFoundError("Job not found");
   }
 
-  if (job.avatarId) {
-    await deleteFromCloudinary(job.avatarId);
+  const applicationCount = await Application.countDocuments({ job: id });
+  if (applicationCount > 0) {
+    throw new ConflictError(
+      "Cannot delete a job that already has applications. Close the job instead.",
+    );
   }
-  await job.deleteOne();
+
+  if (job.avatarId) {
+    await deleteFromCloudinary(job.avatarId).catch(() => null);
+  }
+
+  await Promise.all([
+    User.updateMany({ savedJobs: id }, { $pull: { savedJobs: id } }),
+    Notification.deleteMany({ "data.jobId": id }),
+    job.deleteOne(),
+  ]);
 
   return successResponse(res, null, "Job deleted successfully", 200);
 });
@@ -261,8 +310,9 @@ const getSavedJobs = tryCatchFn(async (req, res) => {
     options: { skip, limit, sort: { createdAt: -1 } },
   });
 
+  logLegacyCompanyLogoWarning();
   return successResponse(res, {
-      jobs: user.savedJobs,
+      jobs: serializeJobCollection(user.savedJobs),
       total,
       page,
       totalPages,

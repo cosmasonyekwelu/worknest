@@ -2,6 +2,55 @@ import Jobs from "../models/jobs.js";
 import { uploadToCloudinary, deleteFromCloudinary } from "../lib/cloudinary.js";
 import { NotFoundError, ValidationError } from "../lib/errors.js";
 
+const MAX_SEARCH_TERM_LENGTH = 80;
+const escapeRegex = (value = "") =>
+  String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const sanitizeSearchValue = (value = "") => {
+  const trimmed = String(value || "").trim();
+  if (!trimmed) {
+    return "";
+  }
+
+  return trimmed.slice(0, MAX_SEARCH_TERM_LENGTH);
+};
+
+const buildSafeRegex = (value = "") => {
+  const sanitizedValue = sanitizeSearchValue(value);
+  if (!sanitizedValue) {
+    return null;
+  }
+
+  return new RegExp(escapeRegex(sanitizedValue), "i");
+};
+
+const normalizeMultiValue = (value) => {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => String(item || "").trim())
+      .filter(Boolean);
+  }
+
+  const normalizedValue = String(value || "").trim();
+  return normalizedValue ? [normalizedValue] : [];
+};
+
+const assignEnumFilter = (filter, key, value) => {
+  const values = normalizeMultiValue(value);
+  if (!values.length) {
+    return;
+  }
+
+  filter[key] = values.length === 1 ? values[0] : { $in: values };
+};
+
+export const __jobServiceTestables = {
+  escapeRegex,
+  buildSafeRegex,
+  sanitizeSearchValue,
+  normalizeMultiValue,
+};
+
 const uploadJobAvatar = async (jobId, avatar) => {
   const job = await Jobs.findById(jobId);
   if (!job) throw new NotFoundError("Job not found");
@@ -48,10 +97,14 @@ const searchJobService = async ({
     filter.status = "active";
   }
 
-  if (jobType) filter.jobType = jobType;
-  if (category) filter.category = category;
-  if (location) filter.location = { $regex: location, $options: "i" };
-  if (experienceLevel) filter.experienceLevel = { $regex: experienceLevel, $options: "i" };
+  assignEnumFilter(filter, "jobType", jobType);
+  assignEnumFilter(filter, "category", category);
+
+  const safeLocationRegex = buildSafeRegex(location);
+  if (safeLocationRegex) filter.location = safeLocationRegex;
+
+  const safeExperienceLevelRegex = buildSafeRegex(experienceLevel);
+  if (safeExperienceLevelRegex) filter.experienceLevel = safeExperienceLevelRegex;
 
   const parsedSalaryMin = Number(salaryMin);
   const parsedSalaryMax = Number(salaryMax);
@@ -66,9 +119,10 @@ const searchJobService = async ({
   }
 
   let useTextSearch = false;
-  if (keyword?.trim()) {
+  const safeKeyword = sanitizeSearchValue(keyword);
+  if (safeKeyword) {
     useTextSearch = true;
-    filter.$text = { $search: keyword.trim() };
+    filter.$text = { $search: safeKeyword };
   }
 
   const safeLimit = Math.min(Math.max(1, Number(limit) || 10), 50);
@@ -89,14 +143,15 @@ const searchJobService = async ({
   try {
     jobs = await query.skip(skip).limit(safeLimit).lean();
   } catch {
-    if (!keyword?.trim()) throw new Error("Failed to query jobs");
+    if (!safeKeyword) throw new Error("Failed to query jobs");
     delete filter.$text;
+    const fallbackRegex = buildSafeRegex(safeKeyword);
     filter.$or = [
-      { title: { $regex: keyword, $options: "i" } },
-      { location: { $regex: keyword, $options: "i" } },
-      { companyName: { $regex: keyword, $options: "i" } },
-      { experienceLevel: { $regex: keyword, $options: "i" } },
-      { jobDescription: { $regex: keyword, $options: "i" } },
+      { title: fallbackRegex },
+      { location: fallbackRegex },
+      { companyName: fallbackRegex },
+      { experienceLevel: fallbackRegex },
+      { jobDescription: fallbackRegex },
     ];
     jobs = await Jobs.find(filter).sort("-createdAt").skip(skip).limit(safeLimit).lean();
   }

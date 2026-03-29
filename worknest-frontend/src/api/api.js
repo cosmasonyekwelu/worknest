@@ -1,6 +1,27 @@
 import axiosInstance, { refreshClient } from "@/utils/axiosInstance";
 import { headers } from "@/utils/constant";
 
+const serializeArrayParams = (params = {}) => {
+  const searchParams = new URLSearchParams();
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (value === null || value === undefined || value === "") {
+      return;
+    }
+
+    if (Array.isArray(value)) {
+      value.filter(Boolean).forEach((item) => {
+        searchParams.append(key, item);
+      });
+      return;
+    }
+
+    searchParams.append(key, value);
+  });
+
+  return searchParams.toString();
+};
+
 export const registerUser = async (formData) => {
   return await axiosInstance.post("/auth/create", formData);
 };
@@ -105,7 +126,12 @@ export const deleteJob = async (id, accessToken) => {
 };
 
 export const getAllJobs = async (params = {}, accessToken) => {
-  const config = { params };
+  const config = {
+    params,
+    paramsSerializer: {
+      serialize: serializeArrayParams,
+    },
+  };
   if (accessToken) {
     config.headers = {
       Authorization: `Bearer ${accessToken}`,

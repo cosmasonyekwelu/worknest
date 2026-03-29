@@ -175,7 +175,7 @@ export default function JobDetails() {
               <div className="w-16 h-16 bg-[#E0E7FF] rounded-2xl flex items-center justify-center shrink-0 overflow-hidden">
                 {/* ✅ Replace with Avatar component */}
                 <Avatar
-                  src={job.companyLogo?.url || job.companyLogo}
+                  src={job.companyLogo}
                   name={job.companyName}
                   alt={job.companyName}
                   size={48} // fits inside w-16 h-16 (64px) with padding/margin
@@ -473,7 +473,7 @@ export default function JobDetails() {
                       <div className="w-10 h-10 bg-[#E0E7FF] rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
                         {/* ✅ Replace with Avatar for related jobs */}
                         <Avatar
-                          src={relatedJob.companyLogo?.url || relatedJob.companyLogo}
+                          src={relatedJob.companyLogo}
                           name={relatedJob.companyName}
                           alt={relatedJob.companyName}
                           size={32} // matches w-10 h-10

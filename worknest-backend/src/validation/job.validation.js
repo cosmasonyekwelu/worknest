@@ -5,6 +5,21 @@ const emptyToUndefined = (value) => {
   if (typeof value === "string" && value.trim() === "") return undefined;
   return value;
 };
+const normalizeStringArray = (value) => {
+  if (Array.isArray(value)) {
+    const filtered = value
+      .map((item) => (typeof item === "string" ? item.trim() : item))
+      .filter(Boolean);
+    return filtered.length ? filtered : undefined;
+  }
+
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed ? [trimmed] : undefined;
+  }
+
+  return value;
+};
 
 const salaryRangeSchema = z.object({
   min: z.number().min(0),
@@ -39,8 +54,14 @@ export const jobValidation = {
   update: z.object(baseJobSchema).partial(),
   search: z.object({
     keyword: z.preprocess(emptyToUndefined, z.string().trim().max(120).optional()),
-    category: z.preprocess(emptyToUndefined, z.string().trim().max(80).optional()),
-    jobType: z.preprocess(emptyToUndefined, z.enum(["Full-Time", "Contract", "Part-Time", "Internship", "Freelance"]).optional()),
+    category: z.preprocess(
+      normalizeStringArray,
+      z.array(z.string().trim().max(80)).min(1).optional(),
+    ),
+    jobType: z.preprocess(
+      normalizeStringArray,
+      z.array(z.enum(["Full-Time", "Contract", "Part-Time", "Internship", "Freelance"])).min(1).optional(),
+    ),
     salaryMin: z.coerce.number().min(0).optional(),
     salaryMax: z.coerce.number().min(0).optional(),
     experienceLevel: z.preprocess(emptyToUndefined, z.string().trim().max(60).optional()),

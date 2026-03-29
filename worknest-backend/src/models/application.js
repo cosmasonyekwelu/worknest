@@ -1,4 +1,5 @@
 import mongoose, { Schema, model } from "mongoose";
+import { APPLICATION_STATUSES, APPLICATION_STATUS_VALUES } from "../constants/applicationStatus.js";
 
 const applicationSchema = new Schema(
   {
@@ -88,16 +89,8 @@ const applicationSchema = new Schema(
 
     status: {
       type: String,
-      enum: [
-        "submitted",
-        "in_review",
-        "shortlisted",
-        "interview",
-        "offer",
-        "rejected",
-        "hired",
-      ],
-      default: "submitted",
+      enum: [...APPLICATION_STATUS_VALUES],
+      default: APPLICATION_STATUSES.SUBMITTED,
       index: true,
     },
     internalNote: {

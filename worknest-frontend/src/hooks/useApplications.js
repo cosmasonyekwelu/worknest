@@ -6,6 +6,7 @@ import {
   updateApplicationStatus,
   updateApplicationNote,
   getApplicationStats,
+  getApplicationCountsByJobIds,
   triggerAIReview,
   submitInterviewAnswers,
   updateApplicationPersonalInfo,
@@ -169,32 +170,12 @@ export function useJobApplicationCounts(jobIds) {
     queryKey: ["job-application-counts", jobIds],
     queryFn: async () => {
       if (!jobIds || jobIds.length === 0) return {};
-
-      // Fetch counts for all jobs in parallel
-      const countPromises = jobIds.map(async (jobId) => {
-        try {
-          const res = await getAllApplications({
-            jobId,
-            page: 1,
-            limit: 1,
-            accessToken,
-          });
-          return { jobId, count: res.total || 0 };
-        } catch (error) {
-          console.error(`Failed to fetch count for job ${jobId}:`, error);
-          return { jobId, count: 0 };
-        }
-      });
-
-      const results = await Promise.all(countPromises);
-
-      // Convert to map
-      const countsMap = {};
-      results.forEach(({ jobId, count }) => {
-        countsMap[jobId] = count;
-      });
-
-      return countsMap;
+      const res = await getApplicationCountsByJobIds({ jobIds, accessToken });
+      const data = Array.isArray(res.data?.data) ? res.data.data : [];
+      return data.reduce((acc, item) => {
+        acc[item.jobId] = item.count;
+        return acc;
+      }, {});
     },
     enabled: !!accessToken && jobIds && jobIds.length > 0,
     staleTime: 30000, // Cache for 30 seconds

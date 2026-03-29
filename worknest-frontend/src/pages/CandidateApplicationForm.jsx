@@ -18,11 +18,25 @@ import { useAuth } from "@/store";
 import { toast } from "sonner";
 import { useDownloadTailoredResume, useResumeAnalysis, useTailorResume } from "@/hooks/useResume";
 
+const splitFullName = (fullname = "") => {
+  const normalized = String(fullname || "").trim();
+  if (!normalized) {
+    return { firstName: "", lastName: "" };
+  }
+
+  const [firstName, ...rest] = normalized.split(/\s+/);
+  return {
+    firstName: firstName || "",
+    lastName: rest.join(" "),
+  };
+};
+
 export default function ApplicationForm() {
   const { id: jobId } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { accessToken, user } = useAuth();
+  const derivedName = splitFullName(user?.fullname);
 
   // Initialize form state
   const [formState, setFormState] = useState({});
@@ -34,11 +48,11 @@ export default function ApplicationForm() {
 
   // Personal Info State
   const [personalInfo, setPersonalInfo] = useState({
-    firstname: user?.firstName || "",
-    lastname: user?.lastName || "",
+    firstname: user?.firstName || derivedName.firstName || "",
+    lastname: user?.lastName || derivedName.lastName || "",
     email: user?.email || "",
-    phone: "",
-    currentLocation: "",
+    phone: user?.phone || "",
+    currentLocation: user?.country || "",
   });
 
   const { data: resume } = useResumeAnalysis();
@@ -52,7 +66,7 @@ export default function ApplicationForm() {
       const data = res.data?.data || res.data;
       return Array.isArray(data) ? data[0] : data;
     },
-    enabled: !!jobId && !!accessToken,
+    enabled: !!jobId,
   });
 
   const questions = job?.applicationQuestions || [];

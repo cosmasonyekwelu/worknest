@@ -1,7 +1,10 @@
 import MockAdapter from "axios-mock-adapter";
 import { afterEach, describe, expect, it } from "vitest";
 import axiosInstance from "@/utils/axiosInstance";
-import { getMyApplications } from "@/api/applications";
+import {
+  getApplicationById,
+  getMyApplications,
+} from "@/api/applications";
 
 describe("applications API contracts", () => {
   const axiosMock = new MockAdapter(axiosInstance);
@@ -67,5 +70,40 @@ describe("applications API contracts", () => {
         accessToken: "token-1",
       }),
     ).rejects.toThrow("Invalid response from server");
+  });
+
+  it("normalizes application detail responses with requirement and companyLogo fields", async () => {
+    axiosMock.onGet("/applications/application-1").reply(200, {
+      success: true,
+      message: "Application retrieved successfully",
+      data: {
+        _id: "application-1",
+        status: "submitted",
+        createdAt: "2026-03-29T10:00:00.000Z",
+        personalInfo: {
+          firstname: "Ada",
+          lastname: "Lovelace",
+          email: "ada@example.com",
+        },
+        answers: [],
+        interview_questions: [],
+        job: {
+          _id: "job-1",
+          title: "Frontend Engineer",
+          companyName: "WorkNest",
+          location: "Remote",
+          requirement: ["React"],
+          companyLogo: "https://cdn.example.com/logo.webp",
+        },
+      },
+    });
+
+    const result = await getApplicationById({
+      id: "application-1",
+      accessToken: "token-1",
+    });
+
+    expect(result.job.requirement).toEqual(["React"]);
+    expect(result.job.companyLogo).toBe("https://cdn.example.com/logo.webp");
   });
 });

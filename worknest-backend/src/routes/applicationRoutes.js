@@ -4,6 +4,7 @@ import {
   getMyApplications,
   getApplication,
   getAllApplications,
+  getApplicationCounts,
   updateApplicationStatus,
   updateInternalNote,
   getApplicationStats,
@@ -49,6 +50,14 @@ router.get(
   verifyAuth,
   authorizedRoles("admin"),
   getApplicationStats,
+);
+
+router.get(
+  "/stats",
+  verifyAuth,
+  authorizedRoles("admin"),
+  validateRequest(applicationValidation.countsQuery, "query"),
+  getApplicationCounts,
 );
 
 router.post(

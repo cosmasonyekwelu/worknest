@@ -18,7 +18,7 @@ export default function SavedJobItem({ job }) {
         {/* Company Logo with fallback to initials */}
         <div className="w-16 h-16 rounded-lg bg-gray-50 flex items-center justify-center shrink-0 border border-gray-100 p-2">
           <Avatar
-            src={job.companyLogo?.url || job.companyLogo} // handles object or string
+            src={job.companyLogo}
             name={job.companyName}
             alt={job.companyName}
             size={48} // 16*3 = 48px (since w-16 h-16 is 64px, but inside p-2, the image is smaller)

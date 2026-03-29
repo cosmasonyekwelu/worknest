@@ -6,6 +6,8 @@ import { uploadToCloudinary, deleteFromCloudinary } from "../lib/cloudinary.js";
 import logger from "../config/logger.js";
 import { AppError, NotFoundError, ValidationError, ConflictError } from "../lib/errors.js";
 import Application from "../models/application.js";
+import Resume from "../models/resume.js";
+import Notification from "../models/notification.js";
 
 const userService = {
   forgotPassword: async (req) => {
@@ -257,14 +259,43 @@ const userService = {
     if (!user) {
       throw new NotFoundError("Account not found");
     }
+
+    const [resume, applications] = await Promise.all([
+      Resume.findOne({ user: userId }),
+      Application.find({ applicant: userId }).select("_id"),
+    ]);
+
     if (user.avatarId) {
-      await deleteFromCloudinary(user.avatarId);
+      await deleteFromCloudinary(user.avatarId).catch(() => null);
     }
-    await User.findByIdAndUpdate(userId, {
-      refreshTokenHash: undefined,
-      refreshTokenExpiresAt: undefined,
-      $inc: { tokenVersion: 1 },
-    });
+
+    if (resume?.originalFile?.publicId) {
+      await deleteFromCloudinary(resume.originalFile.publicId, {
+        resource_type: "raw",
+        type: "authenticated",
+      }).catch(() => null);
+    }
+
+    const applicationIds = applications.map((application) => application._id);
+
+    await Promise.all([
+      User.findByIdAndUpdate(userId, {
+        refreshTokenHash: undefined,
+        refreshTokenExpiresAt: undefined,
+        $inc: { tokenVersion: 1 },
+      }),
+      Resume.deleteOne({ user: userId }),
+      Application.deleteMany({ applicant: userId }),
+      Notification.deleteMany({
+        $or: [
+          { recipient: userId },
+          ...(applicationIds.length
+            ? [{ "data.applicationId": { $in: applicationIds } }]
+            : []),
+        ],
+      }),
+    ]);
+
     await User.findByIdAndDelete(userId);
     return true;
   },

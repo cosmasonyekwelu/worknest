@@ -5,6 +5,7 @@ import {
   getUserApplications,
   getApplicationById,
   getAllApplications as getAllApplicationsService,
+  getApplicationCountsByJobIds,
   updateApplicationStatus as updateApplicationStatusService,
   updateInternalNote as updateInternalNoteService,
   getApplicationStats as getApplicationStatsService,
@@ -169,6 +170,7 @@ export const getAllApplications = tryCatchFn(async (req, res) => {
   const {
     status,
     jobId,
+    jobIds,
     startDate,
     endDate,
     keyword,
@@ -180,7 +182,7 @@ export const getAllApplications = tryCatchFn(async (req, res) => {
   const pageNum = Math.max(1, Number(page));
   const limitNum = Math.min(Math.max(1, Number(limit)), 100);
 
-  const filters = { status, jobId, startDate, endDate, keyword, applicantId };
+  const filters = { status, jobId, jobIds, startDate, endDate, keyword, applicantId };
 
   const applications = await getAllApplicationsService(filters, pageNum, limitNum);
 
@@ -252,4 +254,21 @@ export const getApplicationStats = tryCatchFn(async (req, res) => {
   const stats = await getApplicationStatsService(jobId);
 
   return successResponse(res, stats, "Application statistics retrieved successfully", 200);
+});
+
+export const getApplicationCounts = tryCatchFn(async (req, res) => {
+  const jobIds = Array.isArray(req.query.jobIds)
+    ? req.query.jobIds
+    : req.query.jobIds
+      ? [req.query.jobIds]
+      : [];
+
+  const counts = await getApplicationCountsByJobIds(jobIds);
+
+  return successResponse(
+    res,
+    counts,
+    "Application counts retrieved successfully",
+    200,
+  );
 });

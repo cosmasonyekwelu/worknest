@@ -1,4 +1,8 @@
 import dayjs from "dayjs";
+import {
+  APPLICATION_STATUS_OPTIONS,
+  APPLICATION_STATUS_VALUES,
+} from "@/constants/applicationStatus";
 
 export const slideShow = [
   {
@@ -24,15 +28,7 @@ export const headers = (accessToken) => {
   };
 };
 
-export const statusConfig = [
-  { label: "Submitted", value: "submitted" },
-  { label: "In Review", value: "in_review" },
-  { label: "Shortlisted", value: "shortlisted" },
-  { label: "Interview", value: "interview" },
-  { label: "Offer", value: "offer" },
-  { label: "Rejected", value: "rejected" },
-  { label: "Hired", value: "hired" },
-];
+export const statusConfig = [...APPLICATION_STATUS_OPTIONS];
 
 const normalizeStatusToken = (statusValue = "") =>
   String(statusValue).trim().toLowerCase().replace(/\s+/g, "_");
@@ -47,7 +43,7 @@ export const normalizeApplicationStatus = (statusValue = "") => {
       normalizeStatusToken(status.label) === normalizedToken,
   );
 
-  return matchedStatus?.value || normalizedToken;
+  return matchedStatus?.value || "";
 };
 
 // export const getStatusColor = (statusValue) => {
@@ -67,7 +63,6 @@ export const getStatusStyles = (status) => {
 
   const styles = {
     submitted: "bg-[#DBEAFE] text-[#2563EB] border-transparent",
-    pending: "bg-[#DBEAFE] text-[#2563EB] border-transparent",
     in_review: "bg-[#F3E8FF] text-[#9333EA] border-transparent",
     shortlisted: "bg-[#DCFCE7] text-[#16A34A] border-transparent",
     interview: "bg-[#F3E8FF] text-[#9333EA] border-transparent",
@@ -103,3 +98,5 @@ export const formatDate = (item, format = "display") => {
   }
   return dayjs(item).format("DD/MM/YYYY");
 };
+
+export const applicationStatusValues = [...APPLICATION_STATUS_VALUES];

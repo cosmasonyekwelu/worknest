@@ -3,6 +3,27 @@ import { headers } from "@/utils/constant";
 import { getAllJobs } from "@/api/api";
 import { z } from "zod";
 
+const serializeArrayParams = (params = {}) => {
+  const searchParams = new URLSearchParams();
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (value === null || value === undefined || value === "") {
+      return;
+    }
+
+    if (Array.isArray(value)) {
+      value.filter(Boolean).forEach((item) => {
+        searchParams.append(key, item);
+      });
+      return;
+    }
+
+    searchParams.append(key, value);
+  });
+
+  return searchParams.toString();
+};
+
 const applicationAnswerSchema = z.object({
   question: z.string().optional(),
   answer: z.string().optional(),
@@ -16,8 +37,10 @@ const jobReferenceSchema = z.union([
     id: z.string().optional(),
     title: z.string().optional(),
     companyName: z.string().optional(),
+    requirement: z.array(z.string()).optional(),
     company: z.string().optional(),
     companyLogo: z.any().optional(),
+    avatar: z.any().optional(),
     logo: z.any().optional(),
     location: z.string().optional(),
     createdAt: z.string().optional(),
@@ -64,6 +87,7 @@ const applicationSchema = z.object({
   companyName: z.string().optional(),
   company: z.string().optional(),
   companyLogo: z.any().optional(),
+  avatar: z.any().optional(),
   logo: z.any().optional(),
   jobLocation: z.string().optional(),
   location: z.string().optional(),
@@ -95,6 +119,22 @@ const parseEnvelope = (schema, response, label) => {
   }
 
   return parsed.data.data;
+};
+
+const normalizeAssetUrl = (value) => {
+  if (!value) {
+    return "";
+  }
+
+  if (typeof value === "string") {
+    return value;
+  }
+
+  if (typeof value === "object" && typeof value.url === "string") {
+    return value.url;
+  }
+
+  return "";
 };
 
 export const normalizeApplication = (app) => {
@@ -157,12 +197,15 @@ export const normalizeApplication = (app) => {
     job: {
       id: isJobPopulated ? jobInfo._id || jobInfo.id : jobInfo,
       title: isJobPopulated ? jobInfo.title : app.jobTitle || "Job Position",
+      requirement: isJobPopulated ? jobInfo.requirement || [] : [],
       companyName: isJobPopulated
         ? jobInfo.companyName || jobInfo.company
         : app.companyName || app.company || "Company",
-      companyLogo: isJobPopulated
-        ? jobInfo.companyLogo || jobInfo.logo
-        : app.companyLogo || app.logo,
+      companyLogo: normalizeAssetUrl(
+        isJobPopulated
+          ? jobInfo.companyLogo || jobInfo.avatar || jobInfo.logo
+          : app.companyLogo || app.avatar || app.logo,
+      ),
       location: isJobPopulated
         ? jobInfo.location
         : app.jobLocation || app.location,
@@ -344,4 +387,17 @@ export const getApplicationsOverview = async (accessToken, params = {}) => {
 export const getApplicationStats = async ({ jobId, accessToken }) => {
   const params = jobId ? { jobId } : {};
   return await getApplicationsOverview(accessToken, params);
+};
+
+export const getApplicationCountsByJobIds = async ({
+  jobIds,
+  accessToken,
+}) => {
+  return await axiosInstance.get("/applications/stats", {
+    params: { jobIds },
+    paramsSerializer: {
+      serialize: serializeArrayParams,
+    },
+    ...headers(accessToken),
+  });
 };

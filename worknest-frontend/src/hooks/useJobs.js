@@ -81,6 +81,7 @@ const buildPublicJobsParams = ({
   keyword,
   category,
   jobType,
+  location,
   salaryMin,
   salaryMax,
 }) => {
@@ -89,11 +90,14 @@ const buildPublicJobsParams = ({
   if (keyword) {
     params.keyword = keyword;
   }
-  if (category) {
+  if (category?.length) {
     params.category = category;
   }
-  if (jobType) {
+  if (jobType?.length) {
     params.jobType = jobType;
+  }
+  if (location) {
+    params.location = location;
   }
 
   const normalizedSalaryMin = parsePositiveQueryNumber(salaryMin);
@@ -155,12 +159,12 @@ export function useJobs(filters = {}) {
         : industry
         ? [industry]
         : [];
-      const selectedCategory = categoryValues[0] || "";
-      // TODO: Backend searchJobService currently accepts a single category string.
-      const selectedJobType = Array.isArray(jobType)
-        ? jobType[0] || ""
-        : jobType || "";
-      // TODO: Backend searchJobService currently accepts a single jobType string.
+      const selectedCategories = categoryValues;
+      const normalizedJobTypes = Array.isArray(jobType)
+        ? jobType.filter(Boolean)
+        : jobType
+          ? [jobType]
+          : [];
 
       const parsedSalaryRange = normalizeSalaryRange(salaryRange);
       const selectedSalaryMin =
@@ -171,8 +175,9 @@ export function useJobs(filters = {}) {
         page: normalizedPage,
         limit: normalizedLimit,
         keyword: mergedKeyword,
-        category: selectedCategory,
-        jobType: selectedJobType,
+        category: selectedCategories,
+        jobType: normalizedJobTypes,
+        location: filters.location,
         salaryMin: selectedSalaryMin,
         salaryMax: selectedSalaryMax,
       });

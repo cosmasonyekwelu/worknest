@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { APPLICATION_STATUS_VALUES } from "../constants/applicationStatus.js";
 
 const objectId = z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid ObjectId");
 const emptyToUndefined = (value) => {
@@ -6,15 +7,7 @@ const emptyToUndefined = (value) => {
   return value;
 };
 
-const statusValues = [
-  "submitted",
-  "in_review",
-  "shortlisted",
-  "interview",
-  "offer",
-  "rejected",
-  "hired",
-];
+const statusValues = [...APPLICATION_STATUS_VALUES];
 
 export const applicationValidation = {
   idParam: z.object({
@@ -30,6 +23,14 @@ export const applicationValidation = {
   adminQuery: z.object({
     status: z.preprocess(emptyToUndefined, z.enum(statusValues).optional()),
     jobId: z.preprocess(emptyToUndefined, objectId.optional()),
+    jobIds: z.preprocess(
+      (value) => {
+        if (Array.isArray(value)) return value;
+        if (typeof value === "string" && value.trim()) return [value.trim()];
+        return undefined;
+      },
+      z.array(objectId).min(1).optional(),
+    ),
     applicantId: z.preprocess(emptyToUndefined, objectId.optional()),
     startDate: z.preprocess(emptyToUndefined, z.string().datetime().optional()),
     endDate: z.preprocess(emptyToUndefined, z.string().datetime().optional()),
@@ -59,5 +60,15 @@ export const applicationValidation = {
         answer: z.string().trim().min(1),
       }),
     ).min(1),
+  }),
+  countsQuery: z.object({
+    jobIds: z.preprocess(
+      (value) => {
+        if (Array.isArray(value)) return value;
+        if (typeof value === "string" && value.trim()) return [value.trim()];
+        return undefined;
+      },
+      z.array(objectId).min(1),
+    ),
   }),
 };

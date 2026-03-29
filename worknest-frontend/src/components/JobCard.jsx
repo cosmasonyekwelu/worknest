@@ -86,7 +86,7 @@ export default function JobCard({ job, isSavedInitial = false, onToggleSave }) {
       <div className="w-fit flex space-x-2">
         <div>
           <Avatar
-            src={job.companyLogo?.url || job.companyLogo}
+            src={job.companyLogo}
             name={job.companyName}
             alt={job.companyName}
             size={32}

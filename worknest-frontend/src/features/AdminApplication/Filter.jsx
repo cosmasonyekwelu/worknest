@@ -17,14 +17,7 @@ export default function Filter() {
     status: selectedStatus,
   });
   const dropdownRef = useRef(null);
-
-  const statusOptions = [
-    ...statusConfig,
-    { label: "Viewed", value: "viewed" },
-    { label: "Pending", value: "pending" },
-  ].filter((status, index, statuses) => {
-    return statuses.findIndex((item) => item.value === status.value) === index;
-  });
+  const statusOptions = statusConfig;
 
   // Close dropdown when clicking outside
   useEffect(() => {

@@ -1,11 +1,23 @@
 import Application from "../models/application.js";
 import Jobs from "../models/jobs.js";
 import User from "../models/user.js";
+import mongoose from "mongoose";
 import { NotFoundError, ValidationError, UnauthorizedError } from "../lib/errors.js";
 import logger from "../config/logger.js";
 import { generateInterviewQuestions, reviewApplication, scoreInterviewAnswers } from "./ai.service.js";
+import {
+  APPLICATION_STATUSES,
+  APPLICATION_STATUS_VALUES,
+} from "../constants/applicationStatus.js";
 
 const AI_SHORTLIST_THRESHOLD = Number(process.env.AI_SHORTLIST_THRESHOLD || 50);
+const {
+  SUBMITTED,
+  IN_REVIEW,
+  SHORTLISTED,
+  INTERVIEW,
+  REJECTED,
+} = APPLICATION_STATUSES;
 
 const REQUIRED_PERSONAL_INFO_FIELDS = ["firstname", "lastname", "email"];
 const buildApplicationKeywordQuery = (keyword = "") => {
@@ -15,6 +27,20 @@ const buildApplicationKeywordQuery = (keyword = "") => {
   }
 
   return { $text: { $search: trimmedKeyword } };
+};
+
+const mapApplicationJobFields = (application) => {
+  if (!application?.job) {
+    return application;
+  }
+
+  return {
+    ...application,
+    job: {
+      ...application.job,
+      companyLogo: application.job.companyLogo || application.job.avatar || "",
+    },
+  };
 };
 
 const assertRequiredPersonalInfo = (application) => {
@@ -81,7 +107,7 @@ export const createApplication = async (applicantId, jobId, applicationData) => 
       jobTitle: job.title,
       companyName: job.companyName,
       statusHistory: [{
-        status: "submitted",
+        status: SUBMITTED,
         changedAt: new Date(),
         changedBy: applicantId,
         note: "Application submitted",
@@ -108,9 +134,9 @@ export const processNewApplication = async (applicationId, actorId = null) => {
   const changedBy = actorId || application.applicant;
 
   application.ai_processing_status = "processing";
-  application.status = "in_review";
+  application.status = IN_REVIEW;
   application.statusHistory.push({
-    status: "in_review",
+    status: IN_REVIEW,
     changedAt: new Date(),
     changedBy,
     note: "AI review started",
@@ -123,9 +149,9 @@ export const processNewApplication = async (applicationId, actorId = null) => {
     application.ai_feedback = aiReview.feedback;
 
     if (aiReview.score >= AI_SHORTLIST_THRESHOLD) {
-      application.status = "shortlisted";
+      application.status = SHORTLISTED;
       application.statusHistory.push({
-        status: "shortlisted",
+        status: SHORTLISTED,
         changedAt: new Date(),
         changedBy,
         note: `AI score ${aiReview.score} met threshold ${AI_SHORTLIST_THRESHOLD}`,
@@ -133,17 +159,17 @@ export const processNewApplication = async (applicationId, actorId = null) => {
 
       const interviewQuestions = await generateInterviewQuestions(application.job, application);
       application.interview_questions = interviewQuestions;
-      application.status = "interview";
+      application.status = INTERVIEW;
       application.statusHistory.push({
-        status: "interview",
+        status: INTERVIEW,
         changedAt: new Date(),
         changedBy,
         note: "AI interview questions generated",
       });
     } else {
-      application.status = "rejected";
+      application.status = REJECTED;
       application.statusHistory.push({
-        status: "rejected",
+        status: REJECTED,
         changedAt: new Date(),
         changedBy,
         note: `AI score ${aiReview.score} below threshold ${AI_SHORTLIST_THRESHOLD}`,
@@ -177,7 +203,7 @@ export const submitInterviewAnswers = async (applicationId, applicantId, answers
     throw new UnauthorizedError("You can only submit answers for your own application");
   }
 
-  if (application.status !== "interview") {
+  if (application.status !== INTERVIEW) {
     throw new ValidationError("Interview answers can only be submitted when application status is interview");
   }
 
@@ -206,9 +232,9 @@ export const submitInterviewAnswers = async (applicationId, applicantId, answers
     score: scored.scores[index],
   }));
   application.interview_score = scored.overallScore;
-  application.status = "shortlisted";
+  application.status = SHORTLISTED;
   application.statusHistory.push({
-    status: "shortlisted",
+    status: SHORTLISTED,
     changedAt: new Date(),
     changedBy: applicantId,
     note: `Interview submitted and scored ${scored.overallScore}`,
@@ -259,7 +285,7 @@ export const getUserApplications = async (applicantId, page = 1, limit = 10) => 
 
   const [applications, total] = await Promise.all([
     Application.find({ applicant: applicantId })
-      .populate("job", "title companyName location jobType createdAt")
+      .populate("job", "title companyName location jobType createdAt avatar")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(safeLimit)
@@ -268,7 +294,7 @@ export const getUserApplications = async (applicantId, page = 1, limit = 10) => 
   ]);
 
   return {
-    data: applications,
+    data: applications.map(mapApplicationJobFields),
     total,
     page,
     totalPages: Math.ceil(total / safeLimit),
@@ -280,7 +306,7 @@ export const getUserApplications = async (applicantId, page = 1, limit = 10) => 
 // ------------------------------------------------------------
 export const getApplicationById = async (applicationId, userId, role) => {
   let query = Application.findById(applicationId)
-    .populate("job", "title companyName location jobType requirements")
+    .populate("job", "title companyName location jobType requirement avatar")
     .populate("applicant", "fullname email phone country");
 
   if (role === "admin") {
@@ -298,7 +324,7 @@ export const getApplicationById = async (applicationId, userId, role) => {
     throw new UnauthorizedError("Unauthorized to view this application");
   }
 
-  return application;
+  return mapApplicationJobFields(application);
 };
 
 // ------------------------------------------------------------
@@ -309,6 +335,7 @@ export const getAllApplications = async (filters = {}, page = 1, limit = 10) => 
   const {
     status,
     jobId,
+    jobIds,
     startDate,
     endDate,
     keyword,
@@ -319,6 +346,7 @@ export const getAllApplications = async (filters = {}, page = 1, limit = 10) => 
 
   if (status) query.status = status;
   if (jobId) query.job = jobId;
+  if (jobIds?.length) query.job = { $in: jobIds };
   if (applicantId) query.applicant = applicantId;
 
   if (startDate || endDate) {
@@ -337,7 +365,7 @@ export const getAllApplications = async (filters = {}, page = 1, limit = 10) => 
   const [applications, total] = await Promise.all([
     Application.find(query)
       .select("+internalNote")
-      .populate("job", "title companyName location status")
+      .populate("job", "title companyName location status avatar")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(safeLimit)
@@ -346,7 +374,7 @@ export const getAllApplications = async (filters = {}, page = 1, limit = 10) => 
   ]);
 
   return {
-    data: applications,
+    data: applications.map(mapApplicationJobFields),
     total,
     page,
     totalPages: Math.ceil(total / safeLimit),
@@ -357,15 +385,7 @@ export const getAllApplications = async (filters = {}, page = 1, limit = 10) => 
 // Update application status (admin only)
 // ------------------------------------------------------------
 export const updateApplicationStatus = async (applicationId, status, adminId, note) => {
-  const validStatuses = [
-    "submitted",
-    "in_review",
-    "shortlisted",
-    "interview",
-    "offer",
-    "rejected",
-    "hired",
-  ];
+  const validStatuses = [...APPLICATION_STATUS_VALUES];
 
   if (!validStatuses.includes(status)) {
     throw new ValidationError("Invalid status");
@@ -441,15 +461,7 @@ export const getApplicationStats = async (jobId = null) => {
     },
   ]);
 
-  const allStatuses = [
-    "submitted",
-    "in_review",
-    "shortlisted",
-    "interview",
-    "offer",
-    "rejected",
-    "hired",
-  ];
+  const allStatuses = [...APPLICATION_STATUS_VALUES];
 
   const statsMap = {};
   stats.forEach(stat => {
@@ -469,8 +481,49 @@ export const getApplicationStats = async (jobId = null) => {
   };
 };
 
+export const getApplicationCountsByJobIds = async (jobIds = []) => {
+  const normalizedJobIds = Array.from(
+    new Set(jobIds.map((jobId) => jobId.toString())),
+  );
+
+  if (!normalizedJobIds.length) {
+    return [];
+  }
+
+  const counts = await Application.aggregate([
+    {
+      $match: {
+        job: {
+          $in: normalizedJobIds.map((jobId) => new mongoose.Types.ObjectId(jobId)),
+        },
+      },
+    },
+    {
+      $group: {
+        _id: "$job",
+        count: { $sum: 1 },
+      },
+    },
+    {
+      $project: {
+        jobId: { $toString: "$_id" },
+        count: 1,
+        _id: 0,
+      },
+    },
+  ]);
+
+  const countsMap = new Map(counts.map((item) => [item.jobId, item.count]));
+
+  return normalizedJobIds.map((jobId) => ({
+    jobId,
+    count: countsMap.get(jobId) || 0,
+  }));
+};
+
 export default {
   buildApplicationKeywordQuery,
+  getApplicationCountsByJobIds,
   createApplication,
   processNewApplication,
   submitInterviewAnswers,

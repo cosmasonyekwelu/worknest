@@ -165,7 +165,7 @@ export default function ApplicationDetail({ applicationId, onBack }) {
           {/* Company Logo in Header - ✅ Replaced with Avatar component */}
           <div className="w-16 h-16 rounded-2xl flex items-center justify-center shrink-0 bg-white border border-gray-100 font-bold text-xl relative overflow-hidden shadow-sm">
             <Avatar
-              src={application.job?.companyLogo?.url || application.job?.companyLogo}
+                  src={application.job?.companyLogo}
               name={application.job?.companyName}
               alt={application.job?.companyName || "Company Logo"}
               size={48} // fits inside w-16 h-16 (64px) with padding

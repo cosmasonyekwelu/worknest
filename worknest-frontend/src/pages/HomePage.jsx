@@ -278,7 +278,7 @@ const HomePage = () => {
               className="border border-[#B0B6BE] p-5 sm:p-[20px] lg:p-[30px] flex flex-col sm:flex-row gap-5 sm:gap-6 lg:gap-[55px] items-center rounded-[15px] hover:shadow-lg transition-shadow bg-white"
             >
               <Avatar
-                src={job.companyLogo?.url || job.companyLogo}
+                src={job.companyLogo}
                 name={job.companyName}
                 alt={job.companyName}
                 size={64}

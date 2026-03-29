@@ -2,13 +2,14 @@ import React, { useState } from "react";
 import { ArrowLeft, Search, Loader2, Building2, Calendar } from "lucide-react";
 import { useNavigate } from "react-router";
 import { useMyApplications } from "@/hooks/useApplications";
+import { APPLICATION_STATUS_OPTIONS } from "@/constants/applicationStatus";
 import { getStatusStyles, formatDate } from "@/utils/constant";
 import Avatar from "@/components/Avatar"; // ✅ Import Avatar for company logo
 
 export default function MyApplications() {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("Status");
+  const [statusFilter, setStatusFilter] = useState("");
   const [page, setPage] = useState(1);
   const limit = 10;
 
@@ -31,8 +32,7 @@ export default function MyApplications() {
       ? jobTitle.toLowerCase().includes(searchTermLower) ||
         companyName.toLowerCase().includes(searchTermLower)
       : true;
-    const matchesStatus =
-      statusFilter === "Status" || !statusFilter || app.status === statusFilter;
+    const matchesStatus = !statusFilter || app.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
@@ -81,14 +81,12 @@ export default function MyApplications() {
               onChange={(e) => setStatusFilter(e.target.value)}
               className="appearance-none w-full md:w-[160px] px-6 py-3.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#F57450]/20 focus:border-[#F57450] cursor-pointer transition-all"
             >
-              <option value="Status">Status</option>
-              <option>submitted</option>
-              <option>in_review</option>
-              <option>shortlisted</option>
-              <option>interview</option>
-              <option>offer</option>
-              <option>rejected</option>
-              <option>hired</option>
+              <option value="">Status</option>
+              {APPLICATION_STATUS_OPTIONS.map((status) => (
+                <option key={status.value} value={status.value}>
+                  {status.label}
+                </option>
+              ))}
             </select>
             <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
               <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
@@ -133,7 +131,7 @@ export default function MyApplications() {
                     {/* Company Logo - ✅ Replaced with Avatar */}
                     <div className="w-14 h-14 rounded-2xl shrink-0 bg-white border border-gray-100 overflow-hidden group-hover:scale-105 transition-transform duration-300 shadow-sm">
                       <Avatar
-                        src={app.job?.companyLogo?.url || app.job?.companyLogo}
+                        src={app.job?.companyLogo}
                         name={app.job?.companyName}
                         alt={app.job?.companyName || "Company Logo"}
                         size={56} // matches w-14
