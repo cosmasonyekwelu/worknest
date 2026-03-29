@@ -40,6 +40,7 @@ export default function MyResume() {
   const [selectedFileName, setSelectedFileName] = useState("");
   const [customJobDescription, setCustomJobDescription] = useState("");
   const [customTailoredText, setCustomTailoredText] = useState("");
+  const [downloadingCustomFormat, setDownloadingCustomFormat] = useState(null); // 'pdf' | 'docx' | null
 
   const analysis = resume?.analysis || null;
 
@@ -89,6 +90,7 @@ export default function MyResume() {
       return;
     }
     try {
+      setDownloadingCustomFormat(format);
       const res = await downloadCustomMutation.mutateAsync({ jobDescription: customJobDescription, format });
       const blob = res?.data || res;
       const url = window.URL.createObjectURL(blob);
@@ -101,6 +103,8 @@ export default function MyResume() {
       window.URL.revokeObjectURL(url);
     } catch {
       // handled in hook
+    } finally {
+      setDownloadingCustomFormat(null);
     }
   };
 
@@ -302,7 +306,9 @@ export default function MyResume() {
                   disabled={downloadCustomMutation.isPending || !customJobDescription.trim()}
                   className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 text-gray-800 hover:bg-gray-100 transition disabled:opacity-60"
                 >
-                  {downloadCustomMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                  {downloadCustomMutation.isPending && downloadingCustomFormat === "pdf"
+                    ? <Loader2 className="h-4 w-4 animate-spin" />
+                    : <Download className="h-4 w-4" />}
                   Download PDF
                 </button>
                 <button
@@ -311,7 +317,9 @@ export default function MyResume() {
                   disabled={downloadCustomMutation.isPending || !customJobDescription.trim()}
                   className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 text-gray-800 hover:bg-gray-100 transition disabled:opacity-60"
                 >
-                  {downloadCustomMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                  {downloadCustomMutation.isPending && downloadingCustomFormat === "docx"
+                    ? <Loader2 className="h-4 w-4 animate-spin" />
+                    : <Download className="h-4 w-4" />}
                   Download DOCX
                 </button>
               </div>

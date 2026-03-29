@@ -17,6 +17,7 @@ export default function TailorResumeButton({ jobId, jobTitle = "", variant = "pr
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [tailoredText, setTailoredText] = useState("");
+  const [downloadingFormat, setDownloadingFormat] = useState(null); // 'pdf' | 'docx' | null
 
   const handleTailor = async (event) => {
     event?.stopPropagation?.();
@@ -64,6 +65,7 @@ export default function TailorResumeButton({ jobId, jobTitle = "", variant = "pr
 
   const handleDownload = async () => {
     try {
+      setDownloadingFormat("pdf");
       const res = await downloadMutation.mutateAsync({ jobId, format: "pdf" });
       const blob = res?.data || res;
       const url = window.URL.createObjectURL(blob);
@@ -76,11 +78,14 @@ export default function TailorResumeButton({ jobId, jobTitle = "", variant = "pr
       window.URL.revokeObjectURL(url);
     } catch (error) {
       // handled by hook
+    } finally {
+      setDownloadingFormat(null);
     }
   };
 
   const handleDownloadDocx = async () => {
     try {
+      setDownloadingFormat("docx");
       const res = await downloadMutation.mutateAsync({ jobId, format: "docx" });
       const blob = res?.data || res;
       const url = window.URL.createObjectURL(blob);
@@ -93,6 +98,8 @@ export default function TailorResumeButton({ jobId, jobTitle = "", variant = "pr
       window.URL.revokeObjectURL(url);
     } catch (error) {
       // handled by hook
+    } finally {
+      setDownloadingFormat(null);
     }
   };
 
@@ -145,7 +152,7 @@ export default function TailorResumeButton({ jobId, jobTitle = "", variant = "pr
                 disabled={downloadMutation.isPending}
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-orange-500 text-white hover:bg-orange-600"
               >
-                {downloadMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                {downloadMutation.isPending && downloadingFormat === "pdf" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
                 Download PDF
               </button>
               <button
@@ -154,7 +161,7 @@ export default function TailorResumeButton({ jobId, jobTitle = "", variant = "pr
                 disabled={downloadMutation.isPending}
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 text-gray-800 hover:bg-gray-100"
               >
-                {downloadMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                {downloadMutation.isPending && downloadingFormat === "docx" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
                 Download DOCX
               </button>
             </div>
