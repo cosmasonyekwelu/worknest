@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import axiosInstance from "@/utils/axiosInstance";
 import {
   getApplicationById,
+  getAllApplications,
   getMyApplications,
 } from "@/api/applications";
 
@@ -77,6 +78,52 @@ describe("applications API contracts", () => {
     expect(result.total).toBe(0);
     expect(result.totalPages).toBe(0);
     expect(result.items).toEqual([]);
+  });
+
+  it("accepts admin application responses when applicant is an id string", async () => {
+    axiosMock.onGet("/applications").reply(200, {
+      success: true,
+      message: "Applications retrieved successfully",
+      data: {
+        data: [
+          {
+            _id: "application-1",
+            applicant: "697c2888ff79a60ecbe9d542",
+            status: "shortlisted",
+            createdAt: "2026-03-21T00:26:33.238Z",
+            answers: [],
+            interview_questions: [],
+            personalInfo: {
+              firstname: "Cosmas",
+              lastname: "Onyekwelu",
+              email: "onyecval@gmail.com",
+              phone: "+2348053091974",
+              currentLocation: "Nigeria",
+            },
+            job: {
+              _id: "job-1",
+              title: "Data Scientist",
+              companyName: "AI Talent Solutions",
+              location: "Remote",
+            },
+          },
+        ],
+        total: 38,
+        page: 1,
+        totalPages: 4,
+      },
+    });
+
+    const result = await getAllApplications({
+      page: 1,
+      limit: 10,
+      accessToken: "token-1",
+    });
+
+    expect(result.total).toBe(38);
+    expect(result.totalPages).toBe(4);
+    expect(result.items[0].applicant.name).toBe("Cosmas Onyekwelu");
+    expect(result.items[0].applicant.email).toBe("onyecval@gmail.com");
   });
 
   it("throws when the response shape drifts from the expected contract", async () => {

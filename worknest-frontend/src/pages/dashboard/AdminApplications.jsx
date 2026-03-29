@@ -72,7 +72,7 @@ const AdminApplications = () => {
   const errorMessage =
     error?.response?.data?.message ||
     (error?.message === "Invalid response from server"
-      ? "Applications loaded with an unexpected response shape. Empty result pages should no longer fail after redeploy."
+      ? "Applications are temporarily unavailable. Please refresh and try again."
       : !error?.response
         ? "Unable to reach the applications API. Check backend availability and CORS configuration."
         : "Failed to load applications.");

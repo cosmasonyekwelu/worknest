@@ -67,19 +67,27 @@ const applicationSchema = z.object({
   note: z.string().optional(),
   applicantName: z.string().optional(),
   applicant: z
-    .object({
-      email: z.string().optional(),
-      phone: z.string().optional(),
-      location: z.string().optional(),
-    })
-    .passthrough()
+    .union([
+      z.string(),
+      z
+        .object({
+          email: z.string().optional(),
+          phone: z.string().optional(),
+          location: z.string().optional(),
+        })
+        .passthrough(),
+    ])
     .optional(),
   userId: z
-    .object({
-      fullName: z.string().optional(),
-      email: z.string().optional(),
-    })
-    .passthrough()
+    .union([
+      z.string(),
+      z
+        .object({
+          fullName: z.string().optional(),
+          email: z.string().optional(),
+        })
+        .passthrough(),
+    ])
     .optional(),
   jobId: jobReferenceSchema.optional(),
   job: jobReferenceSchema.optional(),
