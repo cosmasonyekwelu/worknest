@@ -1,4 +1,4 @@
-import pdfParse from "pdf-parse";
+import { PDFParse } from "pdf-parse";
 import mammoth from "mammoth";
 import PDFDocument from "pdfkit";
 import Resume from "../models/resume.js";
@@ -24,8 +24,9 @@ const extractTextFromFile = async (buffer, mimetype) => {
   }
 
   if (mimetype === "application/pdf") {
-    const parsed = await pdfParse(buffer);
-    return parsed.text || "";
+    const parser = new PDFParse({ data: buffer });
+    const parsed = await parser.getText();
+    return parsed?.text || "";
   }
 
   if (mimetype === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
