@@ -36,12 +36,12 @@ export default function JobDetails() {
     isLoading,
     refetch,
   } = useQuery({
-    queryKey: ["job", id],
+    queryKey: ["job", id, accessToken],
     queryFn: async () => {
       const res = await getJobById(id, accessToken);
       return res.data?.data || null;
     },
-    enabled: !!id && !!accessToken,
+    enabled: !!id,
   });
 
   const { data: relatedJobs = [] } = useQuery({
