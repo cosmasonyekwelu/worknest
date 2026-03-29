@@ -20,6 +20,8 @@ const {
 } = APPLICATION_STATUSES;
 
 const REQUIRED_PERSONAL_INFO_FIELDS = ["firstname", "lastname", "email"];
+const getSafeTotalPages = (total, limit) => Math.max(1, Math.ceil(total / limit));
+
 const buildApplicationKeywordQuery = (keyword = "") => {
   const trimmedKeyword = keyword.trim();
   if (!trimmedKeyword) {
@@ -297,7 +299,7 @@ export const getUserApplications = async (applicantId, page = 1, limit = 10) => 
     data: applications.map(mapApplicationJobFields),
     total,
     page,
-    totalPages: Math.ceil(total / safeLimit),
+    totalPages: getSafeTotalPages(total, safeLimit),
   };
 };
 
@@ -377,7 +379,7 @@ export const getAllApplications = async (filters = {}, page = 1, limit = 10) => 
     data: applications.map(mapApplicationJobFields),
     total,
     page,
-    totalPages: Math.ceil(total / safeLimit),
+    totalPages: getSafeTotalPages(total, safeLimit),
   };
 };
 

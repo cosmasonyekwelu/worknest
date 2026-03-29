@@ -97,7 +97,7 @@ const paginatedApplicationsSchema = z.object({
   data: z.array(applicationSchema),
   total: z.number().nonnegative(),
   page: z.number().positive(),
-  totalPages: z.number().positive(),
+  totalPages: z.number().nonnegative(),
 });
 
 const apiEnvelope = (schema) =>

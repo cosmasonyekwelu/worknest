@@ -4,6 +4,7 @@ import Application from "../src/models/application.js";
 import {
   getApplicationById,
   getApplicationCountsByJobIds,
+  getAllApplications,
 } from "../src/services/application.service.js";
 
 test("getApplicationById populates the singular requirement field and maps companyLogo", async () => {
@@ -75,5 +76,42 @@ test("getApplicationCountsByJobIds preserves order and backfills zeros", async (
     ]);
   } finally {
     Application.aggregate = originalAggregate;
+  }
+});
+
+test("getAllApplications returns at least one total page for empty result sets", async () => {
+  const originalFind = Application.find;
+  const originalCountDocuments = Application.countDocuments;
+
+  Application.find = () => ({
+    select() {
+      return this;
+    },
+    populate() {
+      return this;
+    },
+    sort() {
+      return this;
+    },
+    skip() {
+      return this;
+    },
+    limit() {
+      return this;
+    },
+    lean: async () => [],
+  });
+  Application.countDocuments = async () => 0;
+
+  try {
+    const result = await getAllApplications({}, 1, 10);
+
+    assert.equal(result.total, 0);
+    assert.equal(result.page, 1);
+    assert.equal(result.totalPages, 1);
+    assert.deepEqual(result.data, []);
+  } finally {
+    Application.find = originalFind;
+    Application.countDocuments = originalCountDocuments;
   }
 });

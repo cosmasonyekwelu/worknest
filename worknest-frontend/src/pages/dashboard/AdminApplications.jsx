@@ -69,10 +69,13 @@ const AdminApplications = () => {
   const totalPages = response?.totalPages || 1;
 
   const [viewMode, setViewMode] = useState("grid"); // "grid" or "list"
-  const errorMessage = error?.response?.data?.message ||
-    (!error?.response
-      ? "Unable to reach the applications API. Check backend availability and CORS configuration."
-      : "Failed to load applications.");
+  const errorMessage =
+    error?.response?.data?.message ||
+    (error?.message === "Invalid response from server"
+      ? "Applications loaded with an unexpected response shape. Empty result pages should no longer fail after redeploy."
+      : !error?.response
+        ? "Unable to reach the applications API. Check backend availability and CORS configuration."
+        : "Failed to load applications.");
 
   const applicationId = searchParams.get("id");
   const handleBackFromDetails = () => {

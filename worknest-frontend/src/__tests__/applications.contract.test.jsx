@@ -56,6 +56,29 @@ describe("applications API contracts", () => {
     expect(result.items[0].job.title).toBe("Frontend Engineer");
   });
 
+  it("accepts empty paginated responses when totalPages is zero", async () => {
+    axiosMock.onGet("/applications/me").reply(200, {
+      success: true,
+      message: "Applications retrieved successfully",
+      data: {
+        data: [],
+        total: 0,
+        page: 1,
+        totalPages: 0,
+      },
+    });
+
+    const result = await getMyApplications({
+      page: 1,
+      limit: 10,
+      accessToken: "token-1",
+    });
+
+    expect(result.total).toBe(0);
+    expect(result.totalPages).toBe(0);
+    expect(result.items).toEqual([]);
+  });
+
   it("throws when the response shape drifts from the expected contract", async () => {
     axiosMock.onGet("/applications/me").reply(200, {
       success: true,
