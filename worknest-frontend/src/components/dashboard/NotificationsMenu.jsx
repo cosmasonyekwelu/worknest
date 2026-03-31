@@ -5,9 +5,14 @@ import {
   useNotifications,
   useUnreadNotificationCount,
 } from "@/hooks/useNotifications";
+import {
+  getNotificationDestination,
+  getNotificationId,
+  isNotificationRead,
+} from "@/utils/notifications";
 import { Bell, Loader2, RefreshCw } from "lucide-react";
 import { useMemo, useState } from "react";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { toast } from "sonner";
 
 const badgeDisplayValue = (count) => {
@@ -17,6 +22,7 @@ const badgeDisplayValue = (count) => {
 };
 
 export default function NotificationsMenu() {
+  const navigate = useNavigate();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const {
     data: unreadCount = 0,
@@ -50,6 +56,26 @@ export default function NotificationsMenu() {
       toast.error(
         mutationError?.response?.data?.message || "Failed to mark notification as read",
       );
+    }
+  };
+
+  const handleNotificationClick = async (notification) => {
+    const notificationId = getNotificationId(notification);
+    const destination = getNotificationDestination(notification, "admin");
+
+    if (notificationId && !isNotificationRead(notification)) {
+      try {
+        await markSingleAsRead.mutateAsync(notificationId);
+      } catch (mutationError) {
+        toast.error(
+          mutationError?.response?.data?.message || "Failed to mark notification as read",
+        );
+        return;
+      }
+    }
+
+    if (destination) {
+      navigate(destination);
     }
   };
 
@@ -116,8 +142,9 @@ export default function NotificationsMenu() {
             <p className="px-3 py-8 text-sm text-center text-gray-500">No new notifications</p>
           ) : (
             notifications.map((notification) => {
-              const notificationId = notification._id;
-              const isRead = notification?.read === true;
+              const notificationId = getNotificationId(notification);
+              const isRead = isNotificationRead(notification);
+              const destination = getNotificationDestination(notification, "admin");
 
               return (
                 <div
@@ -128,10 +155,25 @@ export default function NotificationsMenu() {
                       : "bg-orange-50 border-orange-100"
                   }`}
                 >
-                  <p className={`text-sm ${isRead ? "font-medium" : "font-semibold"}`}>
-                    {getNotificationTitle(notification)}
-                  </p>
-                  <p className="text-sm text-gray-600 mt-1">{notification?.message}</p>
+                  <button
+                    type="button"
+                    onClick={() => handleNotificationClick(notification)}
+                    className="w-full text-left"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className={`text-sm ${isRead ? "font-medium" : "font-semibold"}`}>
+                          {getNotificationTitle(notification)}
+                        </p>
+                        <p className="text-sm text-gray-600 mt-1">{notification?.message}</p>
+                      </div>
+                      {destination && (
+                        <span className="shrink-0 text-xs font-medium text-[#F57450]">
+                          Open
+                        </span>
+                      )}
+                    </div>
+                  </button>
                   <div className="mt-2 flex items-center justify-between gap-3">
                     <span className="text-xs text-gray-500">
                       {getNotificationRelativeTime(
@@ -141,7 +183,10 @@ export default function NotificationsMenu() {
                     {!isRead && (
                       <button
                         type="button"
-                        onClick={() => handleMarkAsRead(notificationId)}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleMarkAsRead(notificationId);
+                        }}
                         className="text-xs font-medium text-[#F57450] hover:text-[#dc6644] disabled:opacity-50"
                         disabled={markSingleAsRead.isPending}
                       >

@@ -6,13 +6,20 @@ import {
   useNotificationActions,
   useNotifications,
 } from "@/hooks/useNotifications";
+import {
+  getNotificationDestination,
+  getNotificationId,
+  isNotificationRead,
+} from "@/utils/notifications";
 import { Loader2, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router";
 import { toast } from "sonner";
 
 const NOTIFICATION_PAGE_SIZE = 20;
 
 export default function AdminNotifications() {
+  const navigate = useNavigate();
   const [page, setPage] = useState(1);
   const [unreadOnly, setUnreadOnly] = useState(false);
 
@@ -58,6 +65,26 @@ export default function AdminNotifications() {
       toast.error(
         mutationError?.response?.data?.message || "Failed to delete notification",
       );
+    }
+  };
+
+  const handleNotificationClick = async (notification) => {
+    const notificationId = getNotificationId(notification);
+    const destination = getNotificationDestination(notification, "admin");
+
+    if (notificationId && !isNotificationRead(notification)) {
+      try {
+        await markSingleAsRead.mutateAsync(notificationId);
+      } catch (mutationError) {
+        toast.error(
+          mutationError?.response?.data?.message || "Failed to mark notification as read",
+        );
+        return;
+      }
+    }
+
+    if (destination) {
+      navigate(destination);
     }
   };
 
@@ -120,30 +147,47 @@ export default function AdminNotifications() {
         ) : (
           <div className="divide-y divide-gray-100">
             {notifications.map((notification) => {
-              const notificationId = notification._id;
-              const isRead = notification?.read === true;
+              const notificationId = getNotificationId(notification);
+              const isRead = isNotificationRead(notification);
+              const destination = getNotificationDestination(notification, "admin");
 
               return (
                 <div key={notificationId} className="p-4 sm:p-5 flex items-start gap-3">
-                  <div className="flex-1 min-w-0">
-                    <p className={`text-sm ${isRead ? "font-medium" : "font-bold"}`}>
-                      {getNotificationTitle(notification)}
-                    </p>
-                    <p className="text-sm text-gray-600 mt-1 break-words">
-                      {notification?.message}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-2">
-                      {getNotificationRelativeTime(
-                        notification?.createdAt || notification?.updatedAt,
+                  <button
+                    type="button"
+                    onClick={() => handleNotificationClick(notification)}
+                    className="flex-1 min-w-0 text-left"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className={`text-sm ${isRead ? "font-medium" : "font-bold"}`}>
+                          {getNotificationTitle(notification)}
+                        </p>
+                        <p className="text-sm text-gray-600 mt-1 break-words">
+                          {notification?.message}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-2">
+                          {getNotificationRelativeTime(
+                            notification?.createdAt || notification?.updatedAt,
+                          )}
+                        </p>
+                      </div>
+                      {destination && (
+                        <span className="shrink-0 text-xs font-medium text-[#F57450]">
+                          Open
+                        </span>
                       )}
-                    </p>
-                  </div>
+                    </div>
+                  </button>
 
                   <div className="flex flex-col items-end gap-2 shrink-0">
                     {!isRead && (
                       <button
                         type="button"
-                        onClick={() => handleMarkOneAsRead(notificationId)}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleMarkOneAsRead(notificationId);
+                        }}
                         className="text-xs text-[#F57450] font-medium hover:text-[#dc6644] disabled:opacity-60"
                         disabled={markSingleAsRead.isPending}
                       >
@@ -152,7 +196,10 @@ export default function AdminNotifications() {
                     )}
                     <button
                       type="button"
-                      onClick={() => handleDelete(notificationId)}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        handleDelete(notificationId);
+                      }}
                       className="text-gray-400 hover:text-red-500"
                       aria-label="Delete notification"
                       disabled={removeNotification.isPending}
