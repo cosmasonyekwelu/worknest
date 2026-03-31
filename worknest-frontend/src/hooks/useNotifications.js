@@ -12,7 +12,10 @@ import relativeTime from "dayjs/plugin/relativeTime";
 
 dayjs.extend(relativeTime);
 
-const baseNotificationKeys = ["admin_notifications"];
+const getNotificationScope = ({ authMode, user }) =>
+  authMode === "admin" || user?.role === "admin" ? "admin" : "user";
+
+const getBaseNotificationKeys = (scope) => ["notifications", scope];
 
 const parseNumber = (...values) => {
   for (const value of values) {
@@ -63,10 +66,19 @@ const extractUnreadCount = (responseData) => {
 
 export const getNotificationTitle = (notification) => {
   if (notification?.title) return notification.title;
-  if (notification?.type === "new_application_admin") {
-    return "New Application Received";
+
+  switch (notification?.type) {
+    case "new_application_admin":
+      return "New Application Received";
+    case "application_submitted":
+      return "Application Submitted";
+    case "application_status_changed":
+      return "Application Status Updated";
+    case "job_expiring":
+      return "Job Expiring Soon";
+    default:
+      return "Notification";
   }
-  return "Notification";
 };
 
 export const getNotificationRelativeTime = (dateValue) => {
@@ -76,9 +88,13 @@ export const getNotificationRelativeTime = (dateValue) => {
   return date.fromNow();
 };
 
-// Hook for unread count with low-frequency polling and manual refresh support
-export const useUnreadNotificationCount = ({ pollingInterval = 180000, enablePolling = true } = {}) => {
-  const { accessToken } = useAuth();
+export const useUnreadNotificationCount = ({
+  pollingInterval = 180000,
+  enablePolling = true,
+} = {}) => {
+  const { accessToken, authMode, user } = useAuth();
+  const notificationScope = getNotificationScope({ authMode, user });
+  const baseNotificationKeys = getBaseNotificationKeys(notificationScope);
 
   return useQuery({
     queryKey: [...baseNotificationKeys, "unread_count", accessToken],
@@ -93,31 +109,39 @@ export const useUnreadNotificationCount = ({ pollingInterval = 180000, enablePol
   });
 };
 
-// Hook for fetching paginated notifications
-export const useNotifications = ({ page = 1, limit = 20, unreadOnly = false } = {}) => {
-  const { accessToken } = useAuth();
+export const useNotifications = ({
+  page = 1,
+  limit = 20,
+  unreadOnly = false,
+  pollingInterval = 0,
+  enablePolling = false,
+  refetchOnWindowFocus = false,
+} = {}) => {
+  const { accessToken, authMode, user } = useAuth();
+  const notificationScope = getNotificationScope({ authMode, user });
+  const baseNotificationKeys = getBaseNotificationKeys(notificationScope);
 
   return useQuery({
     queryKey: [...baseNotificationKeys, "list", accessToken, page, limit, unreadOnly],
     queryFn: async () => {
       const response = await getNotifications({ accessToken, page, limit, unreadOnly });
-      // response = { status: "success", data: [...], total, page, totalPages, unreadCount }
       return extractNotificationsData(response);
     },
     enabled: !!accessToken,
     placeholderData: (prev) => prev,
+    refetchInterval: enablePolling ? pollingInterval : false,
+    refetchOnWindowFocus,
   });
 };
 
-// Hook for notification actions (mark read, mark all, delete)
 export const useNotificationActions = () => {
   const queryClient = useQueryClient();
-  const { accessToken } = useAuth();
+  const { accessToken, authMode, user } = useAuth();
+  const notificationScope = getNotificationScope({ authMode, user });
+  const baseNotificationKeys = getBaseNotificationKeys(notificationScope);
 
-  // Invalidate all notification queries after mutation
   const refreshNotifications = async () => {
     await queryClient.invalidateQueries({ queryKey: baseNotificationKeys });
-    // Also invalidate the unread count specifically if needed
     await queryClient.invalidateQueries({ queryKey: [...baseNotificationKeys, "unread_count"] });
   };
 

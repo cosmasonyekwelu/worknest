@@ -5,6 +5,7 @@ import mongoose from "mongoose";
 import { NotFoundError, ValidationError, UnauthorizedError } from "../lib/errors.js";
 import logger from "../config/logger.js";
 import { generateInterviewQuestions, reviewApplication, scoreInterviewAnswers } from "./ai.service.js";
+import { createNotification } from "./notification.service.js";
 import {
   APPLICATION_STATUSES,
   canTransitionApplicationStatus,
@@ -17,11 +18,20 @@ const {
   IN_REVIEW,
   SHORTLISTED,
   INTERVIEW,
+  OFFER,
   REJECTED,
+  HIRED,
 } = APPLICATION_STATUSES;
 
 const REQUIRED_PERSONAL_INFO_FIELDS = ["firstname", "lastname", "email"];
 const getSafeTotalPages = (total, limit) => Math.max(1, Math.ceil(total / limit));
+
+const humanizeStatus = (status = "") =>
+  String(status)
+    .split("_")
+    .filter(Boolean)
+    .map((token) => token.charAt(0).toUpperCase() + token.slice(1))
+    .join(" ");
 
 const buildApplicationKeywordQuery = (keyword = "") => {
   const trimmedKeyword = keyword.trim();
@@ -54,6 +64,77 @@ const assertRequiredPersonalInfo = (application) => {
     throw new ValidationError(
       `Missing required personal info fields: ${missing.join(", ")}. Update personal info before triggering AI review.`,
     );
+  }
+};
+
+const buildApplicationStatusNotificationContent = (application) => {
+  const jobTitle = application?.jobTitle || "your application";
+  const companyName = application?.companyName ? ` at ${application.companyName}` : "";
+  const context = `for "${jobTitle}"${companyName}`;
+
+  switch (application?.status) {
+    case INTERVIEW:
+      return {
+        title: "Interview Ready",
+        message: `Your application ${context} has moved to the interview stage. Open WorkNest to continue.`,
+      };
+    case SHORTLISTED:
+      return {
+        title: "You've Been Shortlisted",
+        message: `Great news. Your application ${context} has been shortlisted.`,
+      };
+    case OFFER:
+      return {
+        title: "Offer Received",
+        message: `Your application ${context} has been updated with an offer.`,
+      };
+    case HIRED:
+      return {
+        title: "You're Hired",
+        message: `Congratulations. Your application ${context} has been marked as hired.`,
+      };
+    case REJECTED:
+      return {
+        title: "Application Update",
+        message: `Your application ${context} was not selected this time.`,
+      };
+    case IN_REVIEW:
+      return {
+        title: "Application In Review",
+        message: `Your application ${context} is currently under review.`,
+      };
+    default:
+      return {
+        title: "Application Status Updated",
+        message: `Your application ${context} is now ${humanizeStatus(application?.status)}.`,
+      };
+  }
+};
+
+const notifyApplicantAboutStatusChange = async (application) => {
+  if (!application?.applicant || !application?._id) {
+    return;
+  }
+
+  const { title, message } = buildApplicationStatusNotificationContent(application);
+
+  try {
+    await createNotification(
+      application.applicant,
+      "application_status_changed",
+      title,
+      message,
+      {
+        jobId: application.job?._id || application.job,
+        applicationId: application._id,
+      },
+    );
+  } catch (error) {
+    logger.error("Failed to create application status notification", {
+      applicationId: application?._id,
+      status: application?.status,
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
 };
 
@@ -196,6 +277,7 @@ export const processNewApplication = async (
 
     application.ai_processing_status = "completed";
     await application.save();
+    await notifyApplicantAboutStatusChange(application);
 
     return application;
   } catch (error) {
@@ -282,6 +364,7 @@ export const submitInterviewAnswers = async (applicationId, applicantId, answers
   });
 
   await application.save();
+  await notifyApplicantAboutStatusChange(application);
   return application;
 };
 
@@ -456,6 +539,7 @@ export const updateApplicationStatus = async (applicationId, status, adminId, no
 
   application.status = status;
   await application.save();
+  await notifyApplicantAboutStatusChange(application);
 
   return application;
 };

@@ -3,6 +3,7 @@ import { useAuth } from "@/store";
 import { navAuthLink } from "@/libs/constant";
 import UserDropdown from "./UserDropdown";
 import Drawer from "@/components/Drawer";
+import NotificationsBell from "@/components/notifications/NotificationsBell";
 
 export default function ProfileMenu() {
   const { user } = useAuth();
@@ -10,7 +11,7 @@ export default function ProfileMenu() {
   return (
     <div>
       {/* desktop public links */}
-      <div className="hidden lg:flex  gap-5 items-center">
+      <div className="hidden lg:flex gap-5 items-center">
         {!user && (
           <>
             {navAuthLink.map((item) => (
@@ -31,11 +32,17 @@ export default function ProfileMenu() {
             ))}
           </>
         )}
-        {user && <UserDropdown />}
+        {user && (
+          <>
+            <NotificationsBell audience="user" limit={10} pollingInterval={30000} />
+            <UserDropdown />
+          </>
+        )}
       </div>
 
       {/* mobile drawer */}
-      <div className="lg:hidden">
+      <div className="flex items-center gap-2 lg:hidden">
+        {user && <NotificationsBell audience="user" limit={10} pollingInterval={30000} />}
         <Drawer />
       </div>
     </div>
