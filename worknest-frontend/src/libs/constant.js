@@ -1,4 +1,4 @@
-import { User, FileText, Bookmark, LockKeyhole, Settings } from "lucide-react";
+import { User, FileText, Bookmark, LockKeyhole, Settings, Bell } from "lucide-react";
 
 export const navLink = [
   { name: "Home", path: "/" },
@@ -15,6 +15,7 @@ export const navAuthLink = [
 
 export const profileLinks = [
   { name: "Profile", path: "/profile", icon: User },
+  { name: "Notifications", path: "/notifications", icon: Bell },
   { name: "Settings", path: "/settings", icon: Settings },
   { name: "My Resume", path: "/resume", icon: FileText },
   { name: "Applications", path: "/my-applications", icon: FileText },

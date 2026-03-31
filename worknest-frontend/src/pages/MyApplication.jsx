@@ -23,6 +23,14 @@ export default function MyApplications() {
     navigate(-1);
   };
 
+  const handleOpenApplication = (applicationId) => {
+    if (!applicationId) {
+      return;
+    }
+
+    navigate(`/my-applications/${applicationId}`);
+  };
+
   const filteredApplications = applications.filter((app) => {
     const searchTermLower = searchTerm.toLowerCase();
     const jobTitle = app.job?.title || "";
@@ -124,7 +132,16 @@ export default function MyApplications() {
             filteredApplications.map((app) => (
               <div
                 key={app.id}
-                className="bg-white rounded-2xl p-5 md:p-6 border border-gray-100 hover:shadow-xl hover:shadow-gray-200/50 transition-all duration-300 group"
+                role="button"
+                tabIndex={0}
+                onClick={() => handleOpenApplication(app.id)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    handleOpenApplication(app.id);
+                  }
+                }}
+                className="bg-white rounded-2xl p-5 md:p-6 border border-gray-100 hover:shadow-xl hover:shadow-gray-200/50 transition-all duration-300 group cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#F57450]/30"
               >
                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                   <div className="flex items-center gap-5 flex-1 min-w-0">
@@ -165,7 +182,10 @@ export default function MyApplications() {
                   <div className="shrink-0 flex items-center gap-3">
                     {app.status === "interview" && (
                       <button
-                        onClick={() => navigate(`/applications/${app.id}/interview`)}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          navigate(`/applications/${app.id}/interview`);
+                        }}
                         className="px-4 py-2 rounded-lg bg-[#F57450] text-white text-xs font-bold"
                       >
                         Take Interview

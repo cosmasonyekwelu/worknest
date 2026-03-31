@@ -1,4 +1,4 @@
-import { Menu, Search, ChevronDown } from "lucide-react";
+import { Menu, Bell, Search, ChevronDown } from "lucide-react";
 import { Link } from "react-router";
 import Logout from "../Logout";
 import { useAuth } from "@/store";

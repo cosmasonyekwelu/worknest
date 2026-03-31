@@ -31,12 +31,14 @@ const AdminApplications = lazy(
 );
 const Profile = lazy(() => import("@/pages/Profile.jsx"));
 const Settings = lazy(() => import("@/pages/Settings.jsx"));
+const Notifications = lazy(() => import("@/pages/Notifications.jsx"));
 const PrivacyPolicy = lazy(() => import("@/pages/PrivacyPolicy.jsx"));
 const TermsOfService = lazy(() => import("@/pages/TermsOfService.jsx"));
 const CandidateApplicationForm = lazy(
   () => import("@/pages/CandidateApplicationForm.jsx"),
 );
 const MyApplications = lazy(() => import("@/pages/MyApplication.jsx"));
+const ApplicationDetails = lazy(() => import("@/pages/ApplicationDetails.jsx"));
 const ApplicationInterview = lazy(() => import("@/pages/ApplicationInterview.jsx"));
 const SavedJobs = lazy(() => import("@/pages/SavedJobs.jsx"));
 const MyResume = lazy(() => import("@/pages/MyResume.jsx"));
@@ -144,6 +146,16 @@ const router = createBrowserRouter([
             ),
           },
           {
+            path: "notifications",
+            element: (
+              <PrivateRouteGate>
+                <Suspense fallback={<SuspenseUi />}>
+                  <Notifications />
+                </Suspense>
+              </PrivateRouteGate>
+            ),
+          },
+          {
             path: "jobs",
             element: (
               <Suspense fallback={<SuspenseUi />}>
@@ -217,6 +229,16 @@ const router = createBrowserRouter([
               <PrivateRouteGate>
                 <Suspense fallback={<SuspenseUi />}>
                   <MyApplications />
+                </Suspense>
+              </PrivateRouteGate>
+            ),
+          },
+          {
+            path: "/my-applications/:id",
+            element: (
+              <PrivateRouteGate>
+                <Suspense fallback={<SuspenseUi />}>
+                  <ApplicationDetails />
                 </Suspense>
               </PrivateRouteGate>
             ),

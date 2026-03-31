@@ -43,6 +43,17 @@ describe("notification helpers", () => {
       },
     };
 
+    expect(getNotificationDestination(notification, "user")).toBe(
+      "/my-applications/application-456",
+    );
+  });
+
+  it("falls back to the applications list when no application id exists", () => {
+    const notification = {
+      type: "application_status_changed",
+      data: {},
+    };
+
     expect(getNotificationDestination(notification, "user")).toBe("/my-applications");
   });
 

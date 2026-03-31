@@ -90,7 +90,7 @@ export const getNotificationRelativeTime = (dateValue) => {
 
 export const useUnreadNotificationCount = ({
   pollingInterval = 180000,
-  enablePolling = true,
+  enablePolling = false,
 } = {}) => {
   const { accessToken, authMode, user } = useAuth();
   const notificationScope = getNotificationScope({ authMode, user });

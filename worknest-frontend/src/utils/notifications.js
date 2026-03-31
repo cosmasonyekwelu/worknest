@@ -35,8 +35,11 @@ export const getNotificationDestination = (notification, audience = "user") => {
     return `/jobs/${jobId}`;
   }
 
+  if (applicationId) {
+    return `/my-applications/${applicationId}`;
+  }
+
   if (
-    applicationId ||
     notification?.type === "application_submitted" ||
     notification?.type === "application_status_changed"
   ) {

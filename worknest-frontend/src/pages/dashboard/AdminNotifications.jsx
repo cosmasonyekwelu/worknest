@@ -120,9 +120,7 @@ export default function AdminNotifications() {
         ) : (
           <div className="divide-y divide-gray-100">
             {notifications.map((notification) => {
-              // ✅ Use _id from MongoDB
               const notificationId = notification._id;
-              // ✅ Check read status – backend returns 'read' boolean field
               const isRead = notification?.read === true;
 
               return (

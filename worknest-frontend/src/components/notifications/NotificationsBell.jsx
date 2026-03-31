@@ -25,7 +25,6 @@ const badgeDisplayValue = (count) => {
 export default function NotificationsBell({
   audience = "user",
   limit = 10,
-  pollingInterval = 30000,
   viewAllHref = null,
 }) {
   const { user, accessToken } = useAuth();
@@ -39,10 +38,7 @@ export default function NotificationsBell({
   const {
     data: unreadCount = 0,
     refetch: refetchUnreadCount,
-  } = useUnreadNotificationCount({
-    pollingInterval,
-    enablePolling: true,
-  });
+  } = useUnreadNotificationCount();
   const {
     data: notificationData,
     isLoading,
@@ -53,13 +49,13 @@ export default function NotificationsBell({
     page: 1,
     limit,
     unreadOnly: false,
-    pollingInterval,
-    enablePolling: true,
     refetchOnWindowFocus: false,
   });
   const { markSingleAsRead, markAllAsRead } = useNotificationActions();
 
   const notifications = useMemo(() => notificationData?.items ?? [], [notificationData]);
+  const resolvedViewAllHref =
+    viewAllHref || (audience === "admin" ? "/admin/notifications" : "/notifications");
 
   useEffect(() => {
     if (!open) {
@@ -100,12 +96,21 @@ export default function NotificationsBell({
     return null;
   }
 
-  const handleRefreshNotifications = async () => {
+  const refreshNotifications = async () => {
     try {
       setIsRefreshing(true);
       await Promise.all([refetch(), refetchUnreadCount()]);
     } finally {
       setIsRefreshing(false);
+    }
+  };
+
+  const handleToggleOpen = () => {
+    const nextOpen = !open;
+    setOpen(nextOpen);
+
+    if (nextOpen) {
+      void refreshNotifications();
     }
   };
 
@@ -155,7 +160,7 @@ export default function NotificationsBell({
       <button
         ref={buttonRef}
         type="button"
-        onClick={() => setOpen((prev) => !prev)}
+        onClick={handleToggleOpen}
         className="relative rounded-full p-2 text-gray-700 transition-colors hover:bg-orange-50 hover:text-[#F57450] focus:outline-none focus:ring-2 focus:ring-[#F57450]/30"
         aria-label="Open notifications"
         aria-expanded={open}
@@ -185,7 +190,7 @@ export default function NotificationsBell({
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={handleRefreshNotifications}
+                  onClick={refreshNotifications}
                   className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-600 transition-colors hover:bg-gray-200 disabled:opacity-60"
                   aria-label="Refresh notifications"
                   disabled={isRefreshing}
@@ -207,10 +212,10 @@ export default function NotificationsBell({
               </div>
             </div>
 
-            {viewAllHref && (
+            {resolvedViewAllHref && (
               <div className="mt-3">
                 <Link
-                  to={viewAllHref}
+                  to={resolvedViewAllHref}
                   className="text-sm font-medium text-[#F57450] hover:text-[#dc6644]"
                 >
                   View all notifications

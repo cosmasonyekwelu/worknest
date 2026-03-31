@@ -34,7 +34,7 @@ export default function ProfileMenu() {
         )}
         {user && (
           <>
-            <NotificationsBell audience="user" limit={10} pollingInterval={30000} />
+            <NotificationsBell audience="user" limit={10} />
             <UserDropdown />
           </>
         )}
@@ -42,7 +42,7 @@ export default function ProfileMenu() {
 
       {/* mobile drawer */}
       <div className="flex items-center gap-2 lg:hidden">
-        {user && <NotificationsBell audience="user" limit={10} pollingInterval={30000} />}
+        {user && <NotificationsBell audience="user" limit={10} />}
         <Drawer />
       </div>
     </div>
