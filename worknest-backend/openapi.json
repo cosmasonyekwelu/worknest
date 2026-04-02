@@ -1564,6 +1564,356 @@
     "x-paths-todo": {}
   },
   "components": {
-    "x-components-todo": {}
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT access token. Send as Authorization: Bearer <token>."
+      },
+      "monitoringToken": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-monitoring-token",
+        "description": "Monitoring token required for metrics endpoints."
+      },
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      },
+      "adminRefreshCookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "refreshToken"
+      },
+      "userRefreshCookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "refreshToken"
+      },
+      "csrfHeader": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-csrf-token"
+      }
+    },
+    "parameters": {
+      "IdPath": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Resource identifier.",
+        "schema": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "Bad request",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Unauthorized": {
+        "description": "Authentication required or invalid token",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "Insufficient permissions",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Resource not found",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Conflict": {
+        "description": "Conflict with current resource state",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "TooManyRequests": {
+        "description": "Rate limit exceeded",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ServiceUnavailable": {
+        "description": "Service unavailable",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "ErrorResponse": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "status": {
+            "type": "string",
+            "example": "error"
+          },
+          "message": {
+            "type": "string",
+            "example": "Validation failed"
+          },
+          "error": {
+            "type": "string",
+            "example": "Bad Request"
+          },
+          "requestId": {
+            "type": "string"
+          }
+        }
+      },
+      "ApiEnvelope": {
+        "type": "object",
+        "additionalProperties": true,
+        "description": "Common JSON envelope used by API responses."
+      },
+      "AccessTokenResponse": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ApiEnvelope"
+          }
+        ]
+      },
+      "SignUpRequest": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "SignInRequest": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "GoogleAuthRequest": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "VerifyAccountRequest": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "ForgotPasswordRequest": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "ResetPasswordRequest": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "UserResponse": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "UserListResponse": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "SavedJobsResponse": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "BooleanResponse": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "UserProfileUpdateRequest": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "AdminProfileUpdateRequest": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "AvatarUploadRequest": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "NotificationSettingsUpdateRequest": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "ProfilePrivacyUpdateRequest": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "PasswordUpdateRequest": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "JobType": {
+        "type": "string",
+        "enum": [
+          "full-time",
+          "part-time",
+          "contract",
+          "internship",
+          "remote",
+          "hybrid",
+          "onsite"
+        ]
+      },
+      "JobStatus": {
+        "type": "string",
+        "enum": [
+          "draft",
+          "open",
+          "closed",
+          "archived"
+        ]
+      },
+      "JobCreateRequest": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "JobResponse": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "JobsPageResponse": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "LiveHealthPayload": {
+        "type": "object",
+        "required": [
+          "status",
+          "timestamp"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "example": "ok"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ReadyHealthPayload": {
+        "type": "object",
+        "required": [
+          "status",
+          "database",
+          "timestamp"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ready",
+              "not_ready"
+            ]
+          },
+          "database": {
+            "type": "string",
+            "enum": [
+              "connected",
+              "disconnected"
+            ]
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "MetricsSnapshotPayload": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "RootPayload": {
+        "type": "object",
+        "required": [
+          "status",
+          "message",
+          "environment",
+          "timestamp",
+          "docs"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "example": "success"
+          },
+          "message": {
+            "type": "string",
+            "example": "Welcome to Worknest Backend API"
+          },
+          "environment": {
+            "type": "string",
+            "example": "production"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "docs": {
+            "type": "object",
+            "required": [
+              "swaggerUi",
+              "openApi"
+            ],
+            "properties": {
+              "swaggerUi": {
+                "type": "string",
+                "format": "uri",
+                "example": "https://api.worknest.com/docs"
+              },
+              "openApi": {
+                "type": "string",
+                "format": "uri",
+                "example": "https://api.worknest.com/openapi.json"
+              }
+            }
+          }
+        }
+      }
+    }
   }
 }

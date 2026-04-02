@@ -40,23 +40,7 @@ const renderSwaggerUiHtml = () => `<!DOCTYPE html>
     <div id="swagger-ui"></div>
     <script src="/docs/assets/swagger-ui-bundle.js" defer></script>
     <script src="/docs/assets/swagger-ui-standalone-preset.js" defer></script>
-    <script>
-      window.addEventListener("load", () => {
-        window.ui = SwaggerUIBundle({
-          url: "/openapi.json",
-          dom_id: "#swagger-ui",
-          deepLinking: true,
-          displayRequestDuration: true,
-          docExpansion: "list",
-          persistAuthorization: true,
-          presets: [
-            SwaggerUIBundle.presets.apis,
-            SwaggerUIStandalonePreset,
-          ],
-          layout: "StandaloneLayout",
-        });
-      });
-    </script>
+    <script src="/docs/swagger-initializer.js" defer></script>
   </body>
 </html>`;
 
@@ -72,6 +56,24 @@ router.use(
     maxAge: "1d",
   }),
 );
+
+router.get("/docs/swagger-initializer.js", (req, res) => {
+  res.type("application/javascript").send(`window.addEventListener("load", () => {
+  window.ui = SwaggerUIBundle({
+    url: "/openapi.json",
+    dom_id: "#swagger-ui",
+    deepLinking: true,
+    displayRequestDuration: true,
+    docExpansion: "list",
+    persistAuthorization: true,
+    presets: [
+      SwaggerUIBundle.presets.apis,
+      SwaggerUIStandalonePreset,
+    ],
+    layout: "StandaloneLayout",
+  });
+});`);
+});
 
 router.get("/docs", (req, res) => {
   res.type("html").send(renderSwaggerUiHtml());
