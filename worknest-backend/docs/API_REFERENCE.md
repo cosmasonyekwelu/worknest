@@ -142,6 +142,31 @@ Legacy aliases `POST /jobs/create`, `PATCH /jobs/:id/update`, and `DELETE /jobs/
 ### `POST /applications/:jobId/apply`
 Apply for a job (`multipart/form-data`, field: `resume`, verified applicant only). Resume files are validated by file signature.
 
+Sample `multipart/form-data` payload fields:
+
+- `resume`: _(file: pdf/doc/docx)_
+- `portfolioUrl`: `https://portfolio.example.com`
+- `linkedinUrl`: `https://linkedin.com/in/jane-doe`
+- `personalInfo` (JSON string):
+```json
+{
+  "firstname": "Jane",
+  "lastname": "Doe",
+  "email": "jane.doe@example.com",
+  "phone": "+12025550123",
+  "currentLocation": "Austin, TX"
+}
+```
+- `answers` (JSON string):
+```json
+[
+  {
+    "question": "Why are you a great fit for this role?",
+    "answer": "I have built and scaled similar systems in production."
+  }
+]
+```
+
 ### `GET /applications/me`
 Get current verified applicant's applications.
 
@@ -154,11 +179,64 @@ Get all applications (admin only).
 ### `PATCH /applications/:id/status`
 Update application status (admin only).
 
+Sample JSON payload:
+```json
+{
+  "status": "interview",
+  "note": "Strong system design round. Move to final panel."
+}
+```
+
 ### `PATCH /applications/:id/note`
 Update application internal note (admin only).
 
+Sample JSON payload:
+```json
+{
+  "note": "Candidate has strong communication and ownership signals."
+}
+```
+
 ### `GET /applications/stats/overview`
 Get application stats overview (admin only).
+
+### `GET /applications/stats`
+Get application counts for specific jobs (admin only). Query accepts repeated `jobIds`.
+
+Example query:
+`/applications/stats?jobIds=64f1a8d2c7b9a1e4f9d2c3b1&jobIds=64f1a8d2c7b9a1e4f9d2c3b2`
+
+### `POST /applications/:id/submit-interview`
+Submit interview answers (verified applicant only).
+
+Sample JSON payload:
+```json
+{
+  "answers": [
+    { "answer": "I reduced API latency by 37% by redesigning the caching layer." },
+    { "answer": "I prefer documenting tradeoffs before implementation." }
+  ]
+}
+```
+
+### `POST /applications/:id/ai-review`
+Trigger manual AI review for an application (admin only).
+
+### `PUT /applications/:id/personal-info`
+Update personal info for an application (admin only).
+
+Sample JSON payload:
+```json
+{
+  "personalInfo": {
+    "firstname": "Jane",
+    "lastname": "Doe",
+    "email": "jane.doe@example.com",
+    "phone": "+12025550123",
+    "currentLocation": "Austin, TX"
+  }
+}
+```
 
 ---
 
@@ -166,6 +244,64 @@ Get application stats overview (admin only).
 
 ### `POST /contact/send`
 Submit contact request.
+
+Sample JSON payload:
+```json
+{
+  "fullName": "Jane Doe",
+  "email": "jane.doe@example.com",
+  "subject": "Question about enterprise hiring plan",
+  "message": "Hello team, I would like to understand enterprise support and security options."
+}
+```
+
+---
+
+## Notification Routes (`/notifications`)
+
+### `GET /notifications`
+Get current user's notifications. Query supports `page`, `limit`, `isRead`, and `unreadOnly`.
+
+Example query:
+`/notifications?page=1&limit=20&unreadOnly=true`
+
+### `GET /notifications/unread-count`
+Get unread notification count for the current user.
+
+### `PATCH /notifications/:id/read`
+Mark one notification as read.
+
+### `PATCH /notifications/read-all`
+Mark all current user's notifications as read.
+
+### `DELETE /notifications/:id`
+Delete one notification.
+
+---
+
+## Resume Routes (`/resume`)
+
+### `POST /resume/upload`
+Upload a resume for parsing/analysis (`multipart/form-data`, field: `resume`, verified applicant only).
+
+### `GET /resume/analysis`
+Get the current user's latest resume analysis state/result.
+
+### `POST /resume/tailor/custom`
+Generate tailored resume content from a custom job description.
+
+Sample JSON payload:
+```json
+{
+  "jobDescription": "We are hiring a backend engineer to build resilient Node.js APIs, improve observability, and scale MongoDB-backed services."
+}
+```
+
+### `POST /resume/tailor/:jobId`
+Generate tailored resume content for a specific job.
+
+### `GET /resume/tailor/:jobId/download`
+Download tailored resume output. Query parameter `format` supports `pdf` (default) and `txt`.
 
 ## Operational Endpoints
 
