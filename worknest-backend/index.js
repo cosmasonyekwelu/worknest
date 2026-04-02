@@ -41,6 +41,7 @@ import contactRoutes from "./src/routes/contactRoute.js";
 import notificationRoutes from "./src/routes/notificationRoutes.js";
 import settingsRoutes from "./src/routes/settingsRoutes.js";
 import resumeRoutes from "./src/routes/resumeRoutes.js";
+import docsRoutes from "./src/routes/docsRoutes.js";
 
 const app = express();
 app.set("trust proxy", 1);
@@ -66,11 +67,29 @@ app.use((req, res, next) => {
   next();
 });
 
-const baseHealthPayload = (requestTime) => ({
+const buildAbsoluteUrl = (req, routePath) => {
+  const host = req.get("host");
+  if (!host) {
+    return routePath;
+  }
+
+  const forwardedProto = req.get("x-forwarded-proto");
+  const protocol = forwardedProto
+    ? forwardedProto.split(",")[0].trim()
+    : req.protocol;
+
+  return `${protocol}://${host}${routePath}`;
+};
+
+const baseHealthPayload = (req) => ({
   status: "success",
   message: "Welcome to Worknest Backend API",
   environment: process.env.NODE_ENV,
-  timestamp: requestTime,
+  timestamp: req.requestTime,
+  docs: {
+    swaggerUi: buildAbsoluteUrl(req, "/docs"),
+    openApi: buildAbsoluteUrl(req, "/openapi.json"),
+  },
 });
 
 const sendLiveHealth = (req, res) => {
@@ -94,7 +113,7 @@ const sendReadyHealth = (req, res) => {
 };
 
 app.get("/", (req, res) => {
-  res.status(200).json(baseHealthPayload(req.requestTime));
+  res.status(200).json(baseHealthPayload(req));
 });
 
 app.head("/", (req, res) => {
@@ -143,6 +162,7 @@ app.use("/api/v1/contact", contactRoutes);
 app.use("/api/v1/notifications", notificationRoutes);
 app.use("/api/v1/users/me/settings", settingsRoutes);
 app.use("/api/v1/resume", resumeRoutes);
+app.use(docsRoutes);
 
 app.use(catchNotFound);
 app.use(globalErrorHandler);
@@ -162,10 +182,14 @@ const startServer = async () => {
     });
 
     const server = app.listen(PORT, "0.0.0.0", () => {
+      const localBaseUrl = `http://localhost:${PORT}`;
+
       logger.info(
         `Server running in ${process.env.NODE_ENV} mode on port ${PORT}`,
       );
       logger.info(`Listening on http://0.0.0.0:${PORT}`);
+      logger.info(`Swagger UI available at ${localBaseUrl}/docs`);
+      logger.info(`OpenAPI spec available at ${localBaseUrl}/openapi.json`);
     });
 
     process.once("uncaughtException", (error) => {

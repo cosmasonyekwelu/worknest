@@ -17,6 +17,17 @@ npm install
 npm run dev
 ```
 
+## API Documentation
+- Swagger UI: `GET /docs`
+- Raw OpenAPI spec: `GET /openapi.json`
+
+Once the backend is running locally, you can open:
+
+```text
+http://localhost:5000/docs
+http://localhost:5000/openapi.json
+```
+
 ## Environment Variables
 ```env
 NODE_ENV=development
@@ -60,6 +71,8 @@ AI_SHORTLIST_THRESHOLD=50
 - `GET /ready` and `GET /health/ready`
 - `GET /metrics` (Prometheus text, protected)
 - `GET /metrics/snapshot` (JSON, protected)
+- `GET /docs` (Swagger UI)
+- `GET /openapi.json` (canonical OpenAPI contract)
 
 ## Docker
 Development:
