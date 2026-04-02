@@ -18,6 +18,8 @@ const renderSwaggerUiHtml = () => `<!DOCTYPE html>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>WorkNest API Docs</title>
     <link rel="stylesheet" href="/docs/assets/swagger-ui.css" />
+    <link rel="icon" type="image/png" href="/docs/assets/favicon-32x32.png" sizes="32x32" />
+    <link rel="icon" type="image/png" href="/docs/assets/favicon-16x16.png" sizes="16x16" />
     <style>
       html {
         box-sizing: border-box;
