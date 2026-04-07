@@ -1,6 +1,16 @@
 # Root-level ignore rules for the WorkNest workspace.
 # These apply to both the frontend and backend projects.
 
+# Local tooling and workspace state
+.worknest-test/
+
+.codex/
+.codex-smoke/
+.qodo/
+**/.qodo/
+.claude/
+.cursor/
+
 # Dependencies
 node_modules/
 **/node_modules/
@@ -13,6 +23,10 @@ node_modules/
 .env.*
 **/.env
 **/.env.*
+.envrc
+**/.envrc
+.direnv/
+**/.direnv/
 !.env.example
 !**/.env.example
 *.pem
@@ -21,6 +35,14 @@ node_modules/
 *.cert
 *.p12
 *.pfx
+*.jks
+*.keystore
+*.kdbx
+*.ovpn
+service-account*.json
+serviceAccount*.json
+credentials*.json
+firebase-adminsdk*.json
 secrets/
 **/secrets/
 
@@ -42,6 +64,9 @@ coverage/
 # Runtime and logs
 logs/
 *.log
+*.pid
+*.pid.lock
+*.seed
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -74,6 +99,11 @@ Desktop.ini
 .turbo/
 .vercel/
 .netlify/
+.serverless/
+.aws-sam/
+.terraform/
+*.tfstate
+*.tfstate.*
 
 # Archives and database files that should not be committed by accident
 *.sqlite
@@ -82,3 +112,10 @@ Desktop.ini
 *.zip
 *.tar
 *.gz
+*.7z
+*.rar
+
+# Temporary directories
+tmp/
+temp/
+.tmp/
