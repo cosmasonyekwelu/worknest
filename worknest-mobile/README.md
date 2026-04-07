@@ -1,50 +1,74 @@
-# Welcome to your Expo app 👋
+# WorkNest Mobile (Expo + React Native)
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Applicant-focused mobile app for WorkNest that mirrors the web applicant flows.
 
-## Get started
+## Implemented Features
 
-1. Install dependencies
+- Auth: login, register, verify email, forgot/reset password, Google login endpoint support.
+- Jobs: browse all jobs, search client-side, view details, save/unsave.
+- Saved Jobs list.
+- Multi-step job application with resume upload (PDF/DOC/DOCX), profile snapshot, dynamic questions.
+- My applications list + details.
+- AI interview answers submission when application status is `interview`.
+- Profile settings: update personal info, password, avatar, delete account, logout.
+- Notifications list, unread count, mark single/all as read.
 
-   ```bash
-   npm install
-   ```
+## Tech Stack
 
-2. Start the app
+- Expo Router (file-based navigation)
+- NativeWind (Tailwind classes)
+- TanStack Query
+- React Hook Form + Zod
+- Axios + Secure Store token persistence
+- Sonner Native toasts
 
-   ```bash
-   npx expo start
-   ```
+## Setup
 
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+1. Install dependencies:
 
 ```bash
-npm run reset-project
+npm install
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+2. Create env file:
 
-## Learn more
+```bash
+cp .env.example .env
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+Set:
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+```env
+EXPO_PUBLIC_API_URL=https://your-backend-url.com/api/v1
+```
 
-## Join the community
+3. Run app:
 
-Join our community of developers creating universal apps.
+```bash
+npm run android
+```
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## APK Build (Sideload Distribution)
+
+`eas.json` is configured for internal APK output.
+
+```bash
+eas login
+eas build --platform android --profile apk
+```
+
+After build finishes:
+
+1. Download generated `.apk` from Expo build URL.
+2. Upload APK to GitHub Releases (recommended) or your website.
+3. Share install page from `apk-download.html` with users.
+
+## Download Page Template
+
+See: `apk-download.html`
+
+## Known Limitations
+
+- Google login flow requires backend-issued mobile-compatible token handoff.
+- Push registration token wiring is scaffold-ready but not fully wired to backend endpoint.
+- Endpoint response shape differences from backend may require minor field mapping updates.
