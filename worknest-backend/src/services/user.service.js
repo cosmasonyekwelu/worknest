@@ -18,6 +18,48 @@ import { withMongoTransaction } from "../lib/transaction.js";
 const PASSWORD_RESET_MAX_ATTEMPTS = 5;
 const PASSWORD_RESET_LOCK_WINDOW_MS = 15 * 60 * 1000;
 
+const DEFAULT_NOTIFICATION_SETTINGS = {
+  email: true,
+  push: true,
+  marketing: false,
+};
+
+const DEFAULT_PROFILE_PRIVACY_SETTINGS = {
+  profileVisibility: "public",
+  showEmail: false,
+  showPhone: false,
+};
+
+const normalizeNotificationSettings = (currentSettings = {}, nextSettings = {}) => ({
+  email:
+    nextSettings.email ??
+    currentSettings.email ??
+    DEFAULT_NOTIFICATION_SETTINGS.email,
+  push:
+    nextSettings.push ??
+    currentSettings.push ??
+    DEFAULT_NOTIFICATION_SETTINGS.push,
+  marketing:
+    nextSettings.marketing ??
+    currentSettings.marketing ??
+    DEFAULT_NOTIFICATION_SETTINGS.marketing,
+});
+
+const normalizeProfilePrivacySettings = (currentSettings = {}, nextSettings = {}) => ({
+  profileVisibility:
+    nextSettings.profileVisibility ??
+    currentSettings.profileVisibility ??
+    DEFAULT_PROFILE_PRIVACY_SETTINGS.profileVisibility,
+  showEmail:
+    nextSettings.showEmail ??
+    currentSettings.showEmail ??
+    DEFAULT_PROFILE_PRIVACY_SETTINGS.showEmail,
+  showPhone:
+    nextSettings.showPhone ??
+    currentSettings.showPhone ??
+    DEFAULT_PROFILE_PRIVACY_SETTINGS.showPhone,
+});
+
 const deleteCloudinaryAssetSafely = async (publicId, options = {}) => {
   if (!publicId) {
     return;
@@ -283,12 +325,12 @@ const userService = {
 
     user.settings = {
       ...user.settings,
-      notifications: {
-        ...user.settings?.notifications,
-        email: settingsData.email ?? user.settings?.notifications?.email,
-        push: settingsData.push ?? user.settings?.notifications?.push,
-        marketing:
-          settingsData.marketing ?? user.settings?.notifications?.marketing,
+      notifications: normalizeNotificationSettings(
+        user.settings?.notifications,
+        settingsData,
+      ),
+      profilePrivacy: user.settings?.profilePrivacy ?? {
+        ...DEFAULT_PROFILE_PRIVACY_SETTINGS,
       },
     };
 
@@ -304,16 +346,13 @@ const userService = {
 
     user.settings = {
       ...user.settings,
-      profilePrivacy: {
-        ...user.settings?.profilePrivacy,
-        profileVisibility:
-          settingsData.profileVisibility ??
-          user.settings?.profilePrivacy?.profileVisibility,
-        showEmail:
-          settingsData.showEmail ?? user.settings?.profilePrivacy?.showEmail,
-        showPhone:
-          settingsData.showPhone ?? user.settings?.profilePrivacy?.showPhone,
+      notifications: user.settings?.notifications ?? {
+        ...DEFAULT_NOTIFICATION_SETTINGS,
       },
+      profilePrivacy: normalizeProfilePrivacySettings(
+        user.settings?.profilePrivacy,
+        settingsData,
+      ),
     };
 
     const updatedUser = await user.save();
