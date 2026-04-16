@@ -46,6 +46,20 @@ const resolveRefreshMode = ({ pathname = "/", requestUrl = "" }) => {
     : "user";
 };
 
+const isPublicAuthEndpoint = (requestUrl = "") => {
+  const publicAuthRoutes = [
+    "/auth/login",
+    "/auth/create",
+    "/auth/google",
+    "/auth/forgot-password",
+    "/auth/reset-password",
+    "/auth/resend/verify-token",
+    "/admin/login",
+  ];
+
+  return publicAuthRoutes.some((route) => requestUrl.includes(route));
+};
+
 export const AuthProvider = ({ children }) => {
   const location = useLocation();
   const pathname = location.pathname || "/";
@@ -214,6 +228,7 @@ export const AuthProvider = ({ children }) => {
         if (
           status !== 401 ||
           originalRequest._retry ||
+          isPublicAuthEndpoint(originalRequest.url) ||
           originalRequest.url?.includes("/auth/refresh-token") ||
           originalRequest.url?.includes("/admin/refresh-token")
         ) {

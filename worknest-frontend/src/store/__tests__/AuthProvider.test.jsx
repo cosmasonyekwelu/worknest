@@ -213,6 +213,46 @@ describe("AuthProvider", () => {
     expect(getAuthenticatedUser).toHaveBeenCalledWith("initial-token");
   });
 
+  it("does not retry public auth requests on 401 responses", async () => {
+    vi.mocked(refreshAccessToken).mockResolvedValueOnce({
+      data: {
+        data: {
+          accessToken: "initial-token",
+        },
+      },
+    });
+
+    axiosMock.onPost("/auth/login").reply(401, {
+      message: "Incorrect email or password",
+    });
+
+    renderAuthProvider("/jobs");
+
+    await waitFor(() => {
+      expect(screen.getByTestId("auth-state")).toHaveTextContent(
+        "initial-token",
+      );
+    });
+
+    await expect(
+      axiosInstance.post("/auth/login", {
+        email: "test@worknest.com",
+        password: "wrong-password",
+      }),
+    ).rejects.toMatchObject({
+      response: {
+        status: 401,
+        data: {
+          message: "Incorrect email or password",
+        },
+      },
+    });
+
+    expect(refreshAccessToken).toHaveBeenCalledTimes(1);
+    expect(refreshAdminAccessToken).not.toHaveBeenCalled();
+    expect(getAuthenticatedUser).toHaveBeenCalledWith("initial-token");
+  });
+
   it("queues concurrent 401 retries behind a single user refresh", async () => {
     const deferredRefresh = createDeferred();
 
